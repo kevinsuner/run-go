@@ -5,7 +5,9 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -15,6 +17,7 @@ type KeyableEntry struct {
 
 func NewKeyableEntry() *KeyableEntry {
 	entry := &KeyableEntry{}
+	entry.MultiLine = true
 	entry.ExtendBaseWidget(entry)
 	return entry
 }
@@ -25,20 +28,21 @@ func (e *KeyableEntry) TypedShortcut(shortcut fyne.Shortcut) {
 		return
 	}
 
-	log.Println("Text:", e.Text)
+	log.Println(e.Text)
 }
 
 func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("RunGo")
 
-	entry := &KeyableEntry{}
-	entry.ExtendBaseWidget(entry)
+	entry := NewKeyableEntry()
+	label := widget.NewLabel("Type some code to start!")
 
 	ctrlReturn := &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierControl}
-	myWindow.Canvas().AddShortcut(ctrlReturn, entry.TypedShortcut)
+	myWindow.Canvas().AddShortcut(ctrlReturn, entry.Entry.TypedShortcut)
 
-	myWindow.Canvas().SetContent(entry)
+	grid := container.New(layout.NewGridLayout(2), entry, label)
+	myWindow.Canvas().SetContent(grid)
 
 	myWindow.Resize(fyne.NewSize(1024, 640))
 	myWindow.ShowAndRun()
