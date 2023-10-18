@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -17,15 +16,13 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-type ctxKey struct{}
-
 type KeyableEntry struct {
-	context.Context
+	binding.String
 	widget.Entry
 }
 
-func NewKeyableEntry(ctx context.Context) *KeyableEntry {
-	entry := &KeyableEntry{Context: ctx}
+func NewKeyableEntry(str binding.String) *KeyableEntry {
+	entry := &KeyableEntry{String: str}
 	entry.MultiLine = true
 	entry.ExtendBaseWidget(entry)
 	return entry
@@ -60,7 +57,7 @@ func (e *KeyableEntry) TypedShortcut(shortcut fyne.Shortcut) {
 
 		fmt.Println("[DEBUG]", out)
 		fmt.Println("[DEBUG]", string(out))
-		e.Context = context.WithValue(e.Context, ctxKey{}, string(out))
+		e.String.Set(string(out))
 	}
 }
 
@@ -68,26 +65,15 @@ func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("RunGo")
 
-	entry := NewKeyableEntry(context.Background())
-	str := binding.NewString()
-	str.Set("Type some code to start!")
-	label := widget.NewLabelWithData(str)
+	entry := NewKeyableEntry(binding.NewString())
+	entry.String.Set("Type some code to start!")
+	label := widget.NewLabelWithData(entry.String)
 
 	ctrlReturn := &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierControl}
 	myWindow.Canvas().AddShortcut(ctrlReturn, entry.Entry.TypedShortcut)
 
 	grid := container.New(layout.NewGridLayout(2), entry, label)
 	myWindow.Canvas().SetContent(grid)
-
-	go func() {
-		for range time.Tick(time.Millisecond * 100) {
-			if entry.Context.Value(ctxKey{}) == nil {
-				continue
-			} else {
-				str.Set(entry.Context.Value(ctxKey{}).(string))
-			}
-		}
-	}()
 
 	myWindow.Resize(fyne.NewSize(1024, 640))
 	myWindow.ShowAndRun()
