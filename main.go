@@ -48,7 +48,7 @@ func (e *KeyableEntry) TypedShortcut(shortcut fyne.Shortcut) {
 
 		out, err := exec.Command("go", "run", fmt.Sprintf("%d.go", timestamp)).CombinedOutput()
 		if err != nil {
-			log.Fatal(err)
+			e.String.Set(err.Error())
 		}
 
 		if err := os.Remove(fmt.Sprintf("%d.go", timestamp)); err != nil {
