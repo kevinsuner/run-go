@@ -23,12 +23,15 @@ func NewKeyableEntry() *KeyableEntry {
 }
 
 func (e *KeyableEntry) TypedShortcut(shortcut fyne.Shortcut) {
-	if _, ok := shortcut.(*desktop.CustomShortcut); !ok {
+	cs, ok := shortcut.(*desktop.CustomShortcut)
+	if !ok {
 		e.Entry.TypedShortcut(shortcut)
 		return
 	}
 
-	log.Println(e.Text)
+	if cs.Key() == fyne.KeyReturn && cs.Mod() == fyne.KeyModifierControl {
+		log.Println(e.Text)
+	}
 }
 
 func main() {
