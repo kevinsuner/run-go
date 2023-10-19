@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"run-go/widgets"
 
 	"fyne.io/fyne/v2"
@@ -11,6 +13,23 @@ import (
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 )
+
+const APP_DIR string = ".rungo"
+
+func init() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dir := fmt.Sprintf("%s/%s", home, APP_DIR)
+	_, err = os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		if err := os.Mkdir(dir, 0755); err != nil {
+			log.Fatal(err)
+		}
+	}
+}
 
 func main() {
 	myApp := app.New()
