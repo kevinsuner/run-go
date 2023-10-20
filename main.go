@@ -37,6 +37,7 @@ func main() {
 	myWindow := myApp.NewWindow("RunGo")
 
 	ctrlReturn := &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierControl}
+	ctrlS := &desktop.CustomShortcut{KeyName: fyne.KeyS, Modifier: fyne.KeyModifierControl}
 
 	str := binding.NewString()
 	if err := str.Set("Type some code and hit Ctrl+Return to start!"); err != nil {
@@ -45,10 +46,12 @@ func main() {
 
 	editor := widgets.NewEditor(str)
 	console := widgets.NewConsole(str)
+	savePopUp := widgets.NewSavePopUp(editor, myWindow.Canvas())
 
 	playground := container.New(layout.NewGridLayout(2), editor, console)
 
 	myWindow.Canvas().AddShortcut(ctrlReturn, editor.Entry.TypedShortcut)
+	myWindow.Canvas().AddShortcut(ctrlS, savePopUp.TypedShortcut)
 	myWindow.Canvas().SetContent(playground)
 	myWindow.Resize(fyne.NewSize(1024, 640))
 	myWindow.ShowAndRun()
