@@ -11,10 +11,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-const (
-	CUSTOM_SHORTCUT_CTRL_RETURN string = "CustomDesktop:Control+Return"
-	CUSTOM_SHORTCUT_CTRL_S      string = "CustomDesktop:Control+S"
-)
+const CUSTOM_SHORTCUT_CTRL_RETURN string = "CustomDesktop:Control+Return"
 
 type Editor struct {
 	widget.Entry
@@ -45,9 +42,5 @@ func (e *Editor) TypedShortcut(shortcut fyne.Shortcut) {
 		}
 
 		e.String.Set(out)
-	case CUSTOM_SHORTCUT_CTRL_S:
-		// Save code
-		log.Println("Pressed Ctrl+S")
-		e.String.Set(e.Text)
 	}
 }
