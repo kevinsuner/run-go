@@ -2,53 +2,62 @@
 package widgets
 
 import (
-	"log"
+	"fmt"
+	"os"
 	"run-go/events"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/widget"
 )
 
-// Maybe rename to SaveSnippet???
-
 const CUSTOM_SHORTCUT_CTRL_S string = "CustomDesktop:Control+S"
 
-type SavePopUp struct {
+type SaveSnippet struct {
 	*widget.PopUp
+	Name binding.String
 }
 
-func NewSavePopUp(editor *Editor, canvas fyne.Canvas) *SavePopUp {
-	savePopUp := &SavePopUp{}
+func NewSaveSnippet(editor *Editor, canvas fyne.Canvas) *SaveSnippet {
+	saveSnippet := &SaveSnippet{}
 
 	entry := widget.NewEntry()
-	form := &widget.Form{
+	saveSnippet.PopUp = widget.NewModalPopUp(&widget.Form{
 		Items: []*widget.FormItem{
 			{Text: "Name", Widget: entry},
 		},
 		OnSubmit: func() {
 			err := events.CreateGoProject(entry.Text, []byte(editor.Entry.Text))
 			if err != nil {
-				log.Fatal(err)
+				// TODO: Proper error handling
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
 			}
 
-			savePopUp.PopUp.Hide()
-		},
-	}
+			if err := saveSnippet.Name.Set(entry.Text); err != nil {
+				// TODO: Proper error handling
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
 
-	savePopUp.PopUp = widget.NewModalPopUp(form, canvas)
-	return savePopUp
+			saveSnippet.PopUp.Hide()
+		},
+	}, canvas)
+
+	return saveSnippet
 }
 
-func (p *SavePopUp) TypedShortcut(shortcut fyne.Shortcut) {
-	s, ok := shortcut.(*desktop.CustomShortcut)
+func (s *SaveSnippet) TypedShortcut(shortcut fyne.Shortcut) {
+	cs, ok := shortcut.(*desktop.CustomShortcut)
 	if !ok {
-		p.TypedShortcut(shortcut)
+		s.TypedShortcut(shortcut)
+		return
 	}
 
-	switch s.ShortcutName() {
+	switch cs.ShortcutName() {
 	case CUSTOM_SHORTCUT_CTRL_S:
-		p.PopUp.Resize(fyne.NewSize(640, 360))
-		p.PopUp.Show()
+		s.PopUp.Resize(fyne.NewSize(640, 360))
+		s.PopUp.Show()
 	}
 }
