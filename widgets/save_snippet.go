@@ -7,7 +7,6 @@ import (
 	"run-go/events"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/widget"
 )
@@ -16,7 +15,6 @@ const CUSTOM_SHORTCUT_CTRL_S string = "CustomDesktop:Control+S"
 
 type SaveSnippet struct {
 	*widget.PopUp
-	Name binding.String
 }
 
 func NewSaveSnippet(editor *Editor, canvas fyne.Canvas) *SaveSnippet {
@@ -35,7 +33,7 @@ func NewSaveSnippet(editor *Editor, canvas fyne.Canvas) *SaveSnippet {
 				os.Exit(1)
 			}
 
-			if err := saveSnippet.Name.Set(entry.Text); err != nil {
+			if err := editor.SnippetName.Set(entry.Text); err != nil {
 				// TODO: Proper error handling
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
