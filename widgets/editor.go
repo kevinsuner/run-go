@@ -15,11 +15,12 @@ const CUSTOM_SHORTCUT_CTRL_RETURN string = "CustomDesktop:Control+Return"
 
 type Editor struct {
 	widget.Entry
-	binding.String
+	Output      binding.String
+	SnippetName binding.String
 }
 
-func NewEditor(str binding.String) *Editor {
-	editor := &Editor{String: str}
+func NewEditor(output, snippetName binding.String) *Editor {
+	editor := &Editor{Output: output, SnippetName: snippetName}
 	editor.MultiLine = true
 	editor.ExtendBaseWidget(editor)
 
@@ -41,6 +42,6 @@ func (e *Editor) TypedShortcut(shortcut fyne.Shortcut) {
 			log.Fatal(err)
 		}
 
-		e.String.Set(out)
+		e.Output.Set(out)
 	}
 }
