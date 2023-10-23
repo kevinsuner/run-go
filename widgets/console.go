@@ -10,9 +10,9 @@ type Console struct {
 	widget.Label
 }
 
-func NewConsole(str binding.String) *Console {
+func NewConsole(output binding.String) *Console {
 	console := &Console{}
-	console.Bind(str)
+	console.Bind(output)
 	console.ExtendBaseWidget(console)
 
 	return console
