@@ -2,7 +2,8 @@
 package widgets
 
 import (
-	"log"
+	"fmt"
+	"os"
 	"run-go/events"
 
 	"fyne.io/fyne/v2"
@@ -36,12 +37,41 @@ func (e *Editor) TypedShortcut(shortcut fyne.Shortcut) {
 
 	switch s.ShortcutName() {
 	case CUSTOM_SHORTCUT_CTRL_RETURN:
-		// Run code
-		out, err := events.CreateTempAndRun([]byte(e.Text))
+		snippetName, err := e.SnippetName.Get()
 		if err != nil {
-			log.Fatal(err)
+			// TODO: Proper error handling
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
 
-		e.Output.Set(out)
+		if len(snippetName) == 0 {
+			out, err := events.CreateTempAndRun([]byte(e.Text))
+			if err != nil {
+				// TODO: Proper error handling
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+
+			if err := e.Output.Set(out); err != nil {
+				// TODO: Proper error handling
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+
+			return
+		}
+
+		out, err := events.RunGoProject(snippetName, []byte(e.Text))
+		if err != nil {
+			// TODO: Proper error handling
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		if err := e.Output.Set(out); err != nil {
+			// TODO: Proper error handling
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 }
