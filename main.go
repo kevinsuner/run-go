@@ -29,16 +29,18 @@ func init() {
 	}
 }
 
+var (
+	ctrlT = &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifierControl}
+)
+
 func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("RunGo")
 
-	ctrlT := &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifierControl}
+	tabbar := widgets.NewTabBar(myWindow.Canvas())
 
-	tabBar := widgets.NewTabBar(myWindow.Canvas())
-
-	myWindow.Canvas().AddShortcut(ctrlT, tabBar.TypedShortcut)
-	myWindow.Canvas().SetContent(tabBar.AppTabs)
+	myWindow.Canvas().AddShortcut(ctrlT, tabbar.TypedShortcut)
+	myWindow.Canvas().SetContent(tabbar.AppTabs)
 	myWindow.Resize(fyne.NewSize(1024, 640))
 	myWindow.ShowAndRun()
 }
