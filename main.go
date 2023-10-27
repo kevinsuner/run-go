@@ -9,10 +9,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/driver/desktop"
-	"fyne.io/fyne/v2/layout"
 )
 
 const APP_DIR string = ".rungo"
@@ -36,24 +33,12 @@ func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("RunGo")
 
-	ctrlReturn := &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierControl}
-	ctrlS := &desktop.CustomShortcut{KeyName: fyne.KeyS, Modifier: fyne.KeyModifierControl}
+	ctrlT := &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifierControl}
 
-	output := binding.NewString()
-	if err := output.Set("Type some code and hit Ctrl+Return to start!"); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	tabBar := widgets.NewTabBar(myWindow.Canvas())
 
-	editor := widgets.NewEditor(output, binding.NewString())
-	console := widgets.NewConsole(output)
-	saveSnippet := widgets.NewSaveSnippet(editor, myWindow.Canvas())
-
-	playground := container.New(layout.NewGridLayout(2), editor, console)
-
-	myWindow.Canvas().AddShortcut(ctrlReturn, editor.Entry.TypedShortcut)
-	myWindow.Canvas().AddShortcut(ctrlS, saveSnippet.TypedShortcut)
-	myWindow.Canvas().SetContent(playground)
+	myWindow.Canvas().AddShortcut(ctrlT, tabBar.TypedShortcut)
+	myWindow.Canvas().SetContent(tabBar.AppTabs)
 	myWindow.Resize(fyne.NewSize(1024, 640))
 	myWindow.ShowAndRun()
 }
