@@ -33,18 +33,22 @@ func NewTabBar(canvas fyne.Canvas) *TabBar {
 
 	input := NewInput(out, projectName)
 	output := NewOutput(out)
-	popup := NewPopUpWithData(input, projectName, canvas)
+
+	tabs := container.NewAppTabs(container.NewTabItem(
+		"New Snippet",
+		container.New(
+			layout.NewGridLayout(2), input, output,
+		),
+	))
+
+	popup := NewPopUpWithData(input, projectName, tabs, canvas)
 
 	canvas.AddShortcut(ctrlReturn, input.Entry.TypedShortcut)
 	canvas.AddShortcut(ctrlS, popup.TypedShortcut)
 
 	return &TabBar{
-		AppTabs: container.NewAppTabs(
-			container.NewTabItem("New Snippet", container.New(
-				layout.NewGridLayout(2), input, output,
-			)),
-		),
-		Canvas: canvas,
+		AppTabs: tabs,
+		Canvas:  canvas,
 	}
 }
 
@@ -57,11 +61,11 @@ func (t *TabBar) TypedShortcut(shortcut fyne.Shortcut) {
 
 	switch customShortcut.ShortcutName() {
 	case CTRL_T:
-		t.AppTabs.Append(newTabItem(t.Canvas))
+		t.AppTabs.Append(newTabItem(t.AppTabs, t.Canvas))
 	}
 }
 
-func newTabItem(canvas fyne.Canvas) *container.TabItem {
+func newTabItem(tabs *container.AppTabs, canvas fyne.Canvas) *container.TabItem {
 	out, projectName := binding.NewString(), binding.NewString()
 	if err := out.Set("Type some code and hit Ctrl+Return to start!"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -70,7 +74,7 @@ func newTabItem(canvas fyne.Canvas) *container.TabItem {
 
 	input := NewInput(out, projectName)
 	output := NewOutput(out)
-	popup := NewPopUpWithData(input, projectName, canvas)
+	popup := NewPopUpWithData(input, projectName, tabs, canvas)
 
 	canvas.AddShortcut(ctrlReturn, input.Entry.TypedShortcut)
 	canvas.AddShortcut(ctrlS, popup.TypedShortcut)
