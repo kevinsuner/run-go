@@ -41,10 +41,10 @@ func NewTabBar(canvas fyne.Canvas) *TabBar {
 		),
 	))
 
-	popup := NewPopUpWithData(input, projectName, tabs, canvas)
+	saveProjectPopUp := NewSaveProjectPopUp(input, projectName, tabs, canvas)
 
 	canvas.AddShortcut(ctrlReturn, input.Entry.TypedShortcut)
-	canvas.AddShortcut(ctrlS, popup.TypedShortcut)
+	canvas.AddShortcut(ctrlS, saveProjectPopUp.TypedShortcut)
 
 	return &TabBar{
 		AppTabs: tabs,
@@ -74,10 +74,10 @@ func newTabItem(tabs *container.AppTabs, canvas fyne.Canvas) *container.TabItem 
 
 	input := NewInput(out, projectName)
 	output := NewOutput(out)
-	popup := NewPopUpWithData(input, projectName, tabs, canvas)
+	saveProjectPopUp := NewSaveProjectPopUp(input, projectName, tabs, canvas)
 
 	canvas.AddShortcut(ctrlReturn, input.Entry.TypedShortcut)
-	canvas.AddShortcut(ctrlS, popup.TypedShortcut)
+	canvas.AddShortcut(ctrlS, saveProjectPopUp.TypedShortcut)
 
 	return container.NewTabItem("New Snippet", container.New(
 		layout.NewGridLayout(2), input, output,
