@@ -7,6 +7,7 @@ import (
 	"run-go/events"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/widget"
@@ -21,6 +22,7 @@ type PopUp struct {
 func NewPopUpWithData(
 	input *Input,
 	projectName binding.String,
+	tabs *container.AppTabs,
 	canvas fyne.Canvas,
 ) *PopUp {
 	popup := &PopUp{}
@@ -38,6 +40,8 @@ func NewPopUpWithData(
 			os.Exit(1)
 		}
 
+		tabs.Selected().Text = entry.Text
+		tabs.Refresh()
 		popup.PopUp.Hide()
 	}), canvas)
 
