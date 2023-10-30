@@ -15,20 +15,20 @@ import (
 
 const CTRL_S string = "CustomDesktop:Control+S"
 
-type PopUp struct {
+type SaveProjectPopUp struct {
 	*widget.PopUp
 }
 
-func NewPopUpWithData(
+func NewSaveProjectPopUp(
 	input *Input,
 	projectName binding.String,
 	tabs *container.AppTabs,
 	canvas fyne.Canvas,
-) *PopUp {
-	popup := &PopUp{}
+) *SaveProjectPopUp {
+	saveProjectPopUp := &SaveProjectPopUp{}
 
 	entry := widget.NewEntry()
-	popup.PopUp = widget.NewModalPopUp(NewForm("Name", entry, func() {
+	saveProjectPopUp.PopUp = widget.NewModalPopUp(NewForm("Name", entry, func() {
 		err := events.CreateGoProject(entry.Text, []byte(input.Entry.Text))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -42,22 +42,22 @@ func NewPopUpWithData(
 
 		tabs.Selected().Text = entry.Text
 		tabs.Refresh()
-		popup.PopUp.Hide()
+		saveProjectPopUp.PopUp.Hide()
 	}), canvas)
 
-	return popup
+	return saveProjectPopUp
 }
 
-func (p *PopUp) TypedShortcut(shortcut fyne.Shortcut) {
+func (s *SaveProjectPopUp) TypedShortcut(shortcut fyne.Shortcut) {
 	customShortcut, ok := shortcut.(*desktop.CustomShortcut)
 	if !ok {
-		p.TypedShortcut(shortcut)
+		s.TypedShortcut(shortcut)
 		return
 	}
 
 	switch customShortcut.ShortcutName() {
 	case CTRL_S:
-		p.PopUp.Resize(fyne.NewSize(640, 360))
-		p.PopUp.Show()
+		s.PopUp.Resize(fyne.NewSize(640, 360))
+		s.PopUp.Show()
 	}
 }
