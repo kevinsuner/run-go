@@ -12,7 +12,7 @@ import (
 	"fyne.io/fyne/v2/driver/desktop"
 )
 
-const APP_DIR string = ".rungo"
+const APP_DIR string = ".run-go/snippets"
 
 func init() {
 	home, err := os.UserHomeDir()
@@ -23,7 +23,7 @@ func init() {
 	dir := fmt.Sprintf("%s/%s", home, APP_DIR)
 	_, err = os.ReadDir(dir)
 	if os.IsNotExist(err) {
-		if err := os.Mkdir(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0755); err != nil {
 			log.Fatal(err)
 		}
 	}

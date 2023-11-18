@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const SNIPPETS_DIR = ".rungo/snippets"
+const SNIPPETS_DIR = ".run-go/snippets"
 
 func CreateTempAndRun(data []byte) (string, error) {
 	filename := fmt.Sprintf("%d.go", time.Now().Unix())
