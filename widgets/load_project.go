@@ -17,6 +17,10 @@ const CTRL_O string = "CustomDesktop:Control+O"
 
 type LoadProjectPopUp struct {
 	*widget.PopUp
+	input *Input
+	projectName binding.String
+	tabs *container.AppTabs
+	canvas fyne.Canvas
 }
 
 func NewLoadProjectPopUp(
@@ -25,46 +29,13 @@ func NewLoadProjectPopUp(
 	tabs *container.AppTabs,
 	canvas fyne.Canvas,
 ) *LoadProjectPopUp {
-	loadProjectPopUp := &LoadProjectPopUp{}
-
-	projects, err := events.ListGoProjects()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	loadProjectPopUp := &LoadProjectPopUp{
+		input: input,
+		projectName: projectName,
+		tabs: tabs,
+		canvas: canvas,
 	}
-
-	loadProjectPopUp.PopUp = widget.NewModalPopUp(widget.NewList(
-		func() int {
-			return len(projects)
-		},
-		func() fyne.CanvasObject {
-			return widget.NewButton("template", nil)
-		},
-		func(id widget.ListItemID, obj fyne.CanvasObject) {
-			button := obj.(*widget.Button)
-			button.SetText(projects[id])
-			button.OnTapped = func() {
-				if input.Entry.Text == "" {
-					data, err := events.LoadGoProject(button.Text)
-					if err != nil {
-						fmt.Fprintln(os.Stderr, err)
-						os.Exit(1)
-					}
-
-					if err := projectName.Set(button.Text); err != nil {
-						fmt.Fprintln(os.Stderr, err)
-						os.Exit(1)
-					}
-
-					tabs.Selected().Text = button.Text
-					tabs.Refresh()
-					input.Entry.SetText(data)
-				}
-
-				loadProjectPopUp.PopUp.Hide()
-			}
-		},
-	), canvas)
+	loadProjectPopUp.PopUp = widget.NewModalPopUp(nil, canvas)
 
 	return loadProjectPopUp
 }
@@ -78,6 +49,45 @@ func (l *LoadProjectPopUp) TypedShortcut(shortcut fyne.Shortcut) {
 
 	switch customShortcut.ShortcutName() {
 	case CTRL_O:
+		projects, err := events.ListGoProjects()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		l.PopUp = widget.NewModalPopUp(widget.NewList(
+			func() int {
+				return len(projects)
+			},
+			func() fyne.CanvasObject {
+				return widget.NewButton("template", nil)
+			},
+			func(id widget.ListItemID, obj fyne.CanvasObject) {
+				button := obj.(*widget.Button)
+				button.SetText(projects[id])
+				button.OnTapped = func() {
+					if l.input.Entry.Text == "" {
+						data, err := events.LoadGoProject(button.Text)
+						if err != nil {
+							fmt.Fprintln(os.Stderr, err)
+							os.Exit(1)
+						}
+
+						if err := l.projectName.Set(button.Text); err != nil {
+							fmt.Fprintln(os.Stderr, err)
+							os.Exit(1)
+						}
+
+						l.tabs.Selected().Text = button.Text
+						l.tabs.Refresh()
+						l.input.Entry.SetText(data)
+					}
+
+					l.PopUp.Hide()
+				}
+			},
+		), l.canvas)
+
 		l.PopUp.Resize(fyne.NewSize(1024, 640))
 		l.PopUp.Show()
 	}
