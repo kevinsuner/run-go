@@ -19,7 +19,7 @@ func CreateTempAndRun(data []byte) (string, error) {
 		return "", err
 	}
 
-	out, _ := exec.Command("go", "run", filename).CombinedOutput()
+	out, _ := exec.Command(os.Getenv("GOPATH"), "run", filename).CombinedOutput()
 
 	if err := os.Remove(filename); err != nil {
 		return "", err
@@ -48,7 +48,7 @@ func CreateGoProject(name string, data []byte) error {
 		return err
 	}
 
-	cmd := exec.Command("go", "mod", "init", name)
+	cmd := exec.Command(os.Getenv("GOPATH"), "mod", "init", name)
 	cmd.Dir = projectDir
 	if err := cmd.Run(); err != nil {
 		return err

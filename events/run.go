@@ -27,13 +27,13 @@ func RunGoProject(name string, data []byte) (string, error) {
 		return "", err
 	}
 
-	cmd := exec.Command("go", "mod", "tidy")
+	cmd := exec.Command(os.Getenv("GOPATH"), "mod", "tidy")
 	cmd.Dir = projectDir
 	if err := cmd.Run(); err != nil {
 		return "", err
 	}
 
-	cmd = exec.Command("go", "run", "main.go")
+	cmd = exec.Command(os.Getenv("GOPATH"), "run", "main.go")
 	cmd.Dir = projectDir
 	out, _ := cmd.CombinedOutput()
 
