@@ -31,22 +31,28 @@ func NewSaveProjectPopUp(
 	saveProjectPopUp := &SaveProjectPopUp{}
 
 	entry := widget.NewEntry()
-	saveProjectPopUp.PopUp = widget.NewModalPopUp(NewForm("Name", entry, func() {
-		err := events.CreateGoProject(entry.Text, []byte(input.Entry.Text))
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
+	saveProjectPopUp.PopUp = widget.NewModalPopUp(container.NewGridWithRows(2,
+		NewForm("Name", entry, func() {
+			err := events.CreateGoProject(entry.Text, []byte(input.Entry.Text))
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
 
-		if err := projectName.Set(entry.Text); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
+			if err := projectName.Set(entry.Text); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
 
-		tabs.Selected().Text = entry.Text
-		tabs.Refresh()
-		saveProjectPopUp.PopUp.Hide()
-	}), canvas)
+			tabs.Selected().Text = entry.Text
+			tabs.Refresh()
+			saveProjectPopUp.PopUp.Hide()
+		}),
+		widget.NewButton("Close", func() {
+			fmt.Fprintln(os.Stdout, "closeModalButton clicked")
+			saveProjectPopUp.PopUp.Hide()
+		}),
+	), canvas)
 
 	return saveProjectPopUp
 }
