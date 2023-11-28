@@ -21,6 +21,7 @@ var (
 	ctrlReturn = &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierControl}
 	ctrlS      = &desktop.CustomShortcut{KeyName: fyne.KeyS, Modifier: fyne.KeyModifierControl}
 	ctrlO      = &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: fyne.KeyModifierControl}
+	ctrlU      = &desktop.CustomShortcut{KeyName: fyne.KeyU, Modifier: fyne.KeyModifierControl}
 )
 
 type TabBar struct {
@@ -47,11 +48,13 @@ func NewTabBar(canvas fyne.Canvas) *TabBar {
 
 	saveProjectPopUp := NewSaveProjectPopUp(input, projectName, tabs, canvas)
 	loadProjectPopUp := NewLoadProjectPopUp(input, projectName, tabs, canvas)
+	shortcutsPopUp := NewShortcutsPopUp(canvas)
 
 	canvas.AddShortcut(ctrlReturn, input.Entry.TypedShortcut)
 	canvas.AddShortcut(ctrlS, saveProjectPopUp.TypedShortcut)
 	canvas.AddShortcut(ctrlO, loadProjectPopUp.TypedShortcut)
-
+	canvas.AddShortcut(ctrlU, shortcutsPopUp.TypedShortcut)
+		
 	return &TabBar{
 		AppTabs: tabs,
 		Canvas:  canvas,
@@ -82,10 +85,12 @@ func newTabItem(tabs *container.AppTabs, canvas fyne.Canvas) *container.TabItem 
 	output := NewOutput(out)
 	saveProjectPopUp := NewSaveProjectPopUp(input, projectName, tabs, canvas)
 	loadProjectPopUp := NewLoadProjectPopUp(input, projectName, tabs, canvas)
+	shortcutsPopUp := NewShortcutsPopUp(canvas)
 
 	canvas.AddShortcut(ctrlReturn, input.Entry.TypedShortcut)
 	canvas.AddShortcut(ctrlS, saveProjectPopUp.TypedShortcut)
 	canvas.AddShortcut(ctrlO, loadProjectPopUp.TypedShortcut)
+	canvas.AddShortcut(ctrlU, shortcutsPopUp.TypedShortcut)
 
 	return container.NewTabItem("New Snippet", container.New(
 		layout.NewGridLayout(2), input, output,
