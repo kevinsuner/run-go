@@ -1,248 +1,222 @@
 /*
-SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
-SPDX-License-Identifier: MIT
+	SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
+	SPDX-License-Identifier: MIT
 */
 package main
 
 import (
-	"archive/tar"
-	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
-	"run-go/widgets"
 	"runtime"
 	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/widget"
 )
 
 const APP_DIR string = ".run-go"
+const SNIPPETS_DIR string = "snippets"
+const GOS_DIR string = ".gos"
 
 func init() {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
+	}
+
+	if err := os.Setenv("RUNGO_HOME", home); err != nil {
+		log.Fatalln(err)
 	}
 
 	appDir := fmt.Sprintf("%s/%s", home, APP_DIR)
 	_, err = os.ReadDir(appDir)
 	if os.IsNotExist(err) {
 		if err := os.Mkdir(appDir, 0755); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			log.Fatalln(err)
 		}
 	}
 
-	snippetsDir := fmt.Sprintf("%s/%s", appDir, "snippets")
+	snippetsDir := fmt.Sprintf("%s/%s", appDir, SNIPPETS_DIR)
 	_, err = os.ReadDir(snippetsDir)
 	if os.IsNotExist(err) {
 		if err := os.Mkdir(snippetsDir, 0755); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			log.Fatalln(err)
 		}
 	}
 
-	gosDir := fmt.Sprintf("%s/%s", appDir, "gos")
+	gosDir := fmt.Sprintf("%s/%s", appDir, GOS_DIR)
 	_, err = os.ReadDir(gosDir)
 	if os.IsNotExist(err) {
 		if err := os.Mkdir(gosDir, 0755); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			log.Fatalln(err)
 		}
 	}
 
-	// Get the latest Go version
-	goVersionURL := "https://go.dev/VERSION?m=text"
-	resp, err := http.Get(goVersionURL)
+	if err := getOSAndArch(); err != nil {
+		log.Fatalln(err)
+	}
+
+	goVersion, err := checkLatestGoVersion()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		log.Fatalln(err)
+	}
+
+	_, err = os.ReadDir(fmt.Sprintf("%s/%s", gosDir, goVersion))
+	if os.IsNotExist(err) {
+		if err := downloadGoTarball(goVersion, appDir); err != nil {
+			log.Fatalln(err)
+		}
+
+		if err := untar(
+			fmt.Sprintf("%s/%s.tar.gz", appDir, goVersion),
+			gosDir,
+		); err != nil {
+			log.Fatalln(err)
+		}
+
+		if err := os.Rename(
+			fmt.Sprintf("%s/%s", gosDir, "go"),
+			fmt.Sprintf("%s/%s", gosDir, goVersion),
+		); err != nil {
+			log.Fatalln(err)
+		}
+
+		if err := os.Remove(fmt.Sprintf("%s/%s.tar.gz",
+			appDir,
+			goVersion,
+		)); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	if err := os.Setenv("RUNGO_GOBIN", fmt.Sprintf("%s/%s/bin/go",
+		gosDir,
+		goVersion,
+	)); err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func getOSAndArch() error {
+	var goos, goarch string
+
+	unsupportedOS := errors.New("unsupported operating system")
+	unsupportedArch := errors.New("unsupported processor architecture")
+	
+	switch runtime.GOOS {
+	case "darwin":
+		goos = runtime.GOOS
+		if runtime.GOARCH == "arm64" {
+			goarch = runtime.GOARCH
+		} else if runtime.GOARCH == "amd64" {
+			goarch = runtime.GOARCH
+		} else {
+			return unsupportedArch
+		}
+	case "linux":
+		goos = runtime.GOOS
+		if runtime.GOARCH == "amd64" {
+			goarch = runtime.GOARCH
+		} else {
+			return unsupportedArch
+		}
+	case "windows":
+		goos = runtime.GOOS
+		if runtime.GOARCH == "amd64" {
+			goarch = runtime.GOARCH
+		} else {
+			return unsupportedArch
+		}
+	default:
+		return unsupportedOS
+	}
+
+	if err := os.Setenv("RUNGO_OS", goos); err != nil {
+		return err
+	}
+
+	if err := os.Setenv("RUNGO_ARCH", goarch); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func checkLatestGoVersion() (string, error) {
+	resp, err := http.Get("https://go.dev/VERSION?m=text")
+	if err != nil {
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Fprintln(os.Stderr, resp.Status)
-		os.Exit(1)
+		return "", err
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return "", err
 	}
 
-	goVersion := strings.Split(string(body), "\n")[0]
-	fmt.Println(goVersion)
-
-	// Determine which os is the user running
-	var goos, goarch string
-	switch runtime.GOOS {
-		case "darwin":
-			goos = runtime.GOOS
-			if runtime.GOARCH == "arm64" {
-				goarch = runtime.GOARCH
-			} else if runtime.GOARCH == "amd64" {
-				goarch = runtime.GOARCH
-			} else {
-				fmt.Fprintln(os.Stderr, "invalid GOARCH")
-				os.Exit(1)
-			}
-		case "linux":
-			goos = runtime.GOOS
-			if runtime.GOARCH == "amd64" {
-				goarch = runtime.GOARCH
-			} else {
-				fmt.Fprintln(os.Stderr, "invalid GOARCH")
-				os.Exit(1)
-			}
-		case "windows":
-			goos = runtime.GOOS
-			if runtime.GOARCH == "amd64" {
-				goarch = runtime.GOARCH
-			} else {
-				fmt.Fprintln(os.Stderr, "invalid GOARCH")
-				os.Exit(1)
-			}
-		default:
-			fmt.Fprintln(os.Stderr, "invalid GOOS")
-			os.Exit(1)
-	}
-
-	// Check if the latest version is already downloaded
-	goLatestDir := fmt.Sprintf("%s/%s.%s-%s", gosDir, goVersion, goos, goarch)
-	_, err = os.ReadDir(goLatestDir)
-	if os.IsNotExist(err) {
-		// Download latest Go version tarball in .run-go
-		goDownloadURL := fmt.Sprintf("https://go.dev/dl/%s.%s-%s.tar.gz", goVersion, goos, goarch)
-		resp, err = http.Get(goDownloadURL)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			fmt.Fprintln(os.Stderr, resp.Status)
-			os.Exit(1)
-		}
-
-		out, err := os.Create(fmt.Sprintf("%s/%s.%s-%s.tar.gz", appDir, goVersion, goos, goarch))
-		if err != nil {
-			fmt.Fprintln(os.Stderr, resp.Status)
-			os.Exit(1)
-		}
-		defer out.Close()
-
-		_, err = io.Copy(out, resp.Body)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-
-		// Untar the latest Go version tarball in .run-go/gos
-		reader, err := os.Open(fmt.Sprintf("%s/%s.%s-%s.tar.gz", appDir, goVersion, goos, goarch))
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		defer reader.Close()
-
-		gzipReader, err := gzip.NewReader(reader)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		defer gzipReader.Close()
-
-		tarReader := tar.NewReader(gzipReader)
-		for {
-			header, err := tarReader.Next()
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-
-			target := filepath.Join(gosDir, header.Name)
-			switch header.Typeflag {
-				case tar.TypeDir:
-					if _, err := os.Stat(target); err != nil {
-						if err := os.MkdirAll(target, 0755); err != nil {
-							fmt.Fprintln(os.Stderr, err)
-							os.Exit(1)
-						}
-					}
-				case tar.TypeReg:
-					f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-					if err != nil {
-						fmt.Fprintln(os.Stderr, err)
-						os.Exit(1)
-					}
-
-					if _, err := io.Copy(f, tarReader); err != nil {
-						fmt.Fprintln(os.Stderr, err)
-						os.Exit(1)
-					}
-
-					f.Close()
-			}
-		}
-
-		// Rename the folder using the go version, os and architecture of the system
-		if err := os.Rename(
-			fmt.Sprintf("%s/%s", gosDir, "go"), 
-			fmt.Sprintf("%s/%s", gosDir, 
-				fmt.Sprintf("%s.%s-%s", goVersion, goos, goarch),
-			),
-		); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-
-		// Remove the downloaded .tar.gz file
-		if err := os.Remove(fmt.Sprintf("%s/%s.%s-%s.tar.gz", appDir, goVersion, goos, goarch)); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	}
-
-	// Use the installed Go version
-	if err := os.Setenv("GOPATH", fmt.Sprintf("%s/%s.%s-%s/bin/go", gosDir, goVersion, goos, goarch)); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-
-	// Set the OS and the ARCH of the user's system for later use
-	if err := os.Setenv("RUNGO_OS", goos); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-
-	if err := os.Setenv("RUNGO_ARCH", goarch); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	return fmt.Sprintf("%s.%s-%s",
+		strings.Split(string(body), "\n")[0],
+		os.Getenv("RUNGO_OS"),
+		os.Getenv("RUNGO_ARCH"),
+	), nil	
 }
 
-var (
-	ctrlT = &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifierControl}
-)
+func desktopLayout(
+	tabs *container.AppTabs, 
+	shortcuts, about, version *widget.Button,
+) *fyne.Container {
+	return container.NewBorder(
+		nil,
+		container.NewPadded(container.NewGridWithColumns(3,
+			container.NewGridWithColumns(2,
+				shortcuts,
+				about,
+			),
+			layout.NewSpacer(),
+			version,
+		)),
+		nil,
+		nil,
+		container.NewPadded(tabs),
+	)
+}
 
 func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("RunGo")
+	
+	tabs := container.NewAppTabs(
+		container.NewTabItem("Tab 1", container.NewGridWithColumns(2,
+			widget.NewEntry(),
+			widget.NewLabel("Output"),
+		)),
+		container.NewTabItem("Tab 2", container.NewGridWithColumns(2,
+			widget.NewEntry(),
+			widget.NewLabel("Output"),
+		)),
+	)
 
-	tabbar := widgets.NewTabBar(myWindow.Canvas())
+	goVersionsPopUp := goVersionsPopUp(myWindow.Canvas())
 
-	myWindow.Canvas().AddShortcut(ctrlT, tabbar.TypedShortcut)
-	myWindow.Canvas().SetContent(tabbar.AppTabs)
-	myWindow.Resize(fyne.NewSize(1024, 640))
+	shortcuts := widget.NewButton("Shortcuts", nil)
+	about := widget.NewButton("About RunGo", nil)
+	version := widget.NewButton("Go 1.21.4", func() {
+		goVersionsPopUp.Resize(fyne.NewSize(440, 540))
+		goVersionsPopUp.Show()
+	})
+
+	myWindow.SetContent(desktopLayout(tabs, shortcuts, about, version))
+	myWindow.Resize(fyne.NewSize(1280, 720))
 	myWindow.ShowAndRun()
 }
