@@ -17,16 +17,16 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func goVersionsPopUp(canvas fyne.Canvas) *widget.PopUp {
-	versions, err := getGoVersions()
+func goVersionPopUp(canvas fyne.Canvas) *widget.PopUp {
+	goVersions, err := getGoVersions()
 	if err != nil {
 		// Should display a modal with the error and in (debug) mode
 		// log to the console
 		log.Fatalln(err)
 	}
 
-	var goVersionsPopUp *widget.PopUp
-	goVersionsPopUp = widget.NewModalPopUp(container.NewBorder(
+	var goVersionPopUp *widget.PopUp
+	goVersionPopUp = widget.NewModalPopUp(container.NewBorder(
 		// I know, this looks insane, but it is the only way I found for it to work
 		container.NewPadded(container.NewGridWithColumns(12,
 			layout.NewSpacer(),
@@ -41,7 +41,7 @@ func goVersionsPopUp(canvas fyne.Canvas) *widget.PopUp {
 			layout.NewSpacer(),
 			layout.NewSpacer(),
 			widget.NewButtonWithIcon("", theme.CancelIcon(), func() {
-				goVersionsPopUp.Hide()
+				goVersionPopUp.Hide()
 			}),
 		)),
 		nil,
@@ -50,14 +50,14 @@ func goVersionsPopUp(canvas fyne.Canvas) *widget.PopUp {
 		container.NewPadded(
 			widget.NewList(
 				func() int {
-					return len(versions)
+					return len(goVersions)
 				},
 				func() fyne.CanvasObject {
 					return widget.NewButton("template", nil)
 				},
 				func(id widget.ListItemID, obj fyne.CanvasObject) {
 					button := obj.(*widget.Button)
-					button.SetText(versions[id])
+					button.SetText(goVersions[id])
 					button.Alignment = widget.ButtonAlignLeading
 					button.OnTapped = func() {
 						appDir := fmt.Sprintf("%s/%s", os.Getenv("RUNGO_HOME"), APP_DIR)
@@ -103,14 +103,14 @@ func goVersionsPopUp(canvas fyne.Canvas) *widget.PopUp {
 							log.Fatalln(err)
 						}
 
-						goVersionsPopUp.Hide()
+						goVersionPopUp.Hide()
 					}
 				},
 			),
 		),
 	), canvas)
 
-	return goVersionsPopUp
+	return goVersionPopUp
 }
 
 func getGoVersions() ([]string, error) {
@@ -131,20 +131,20 @@ func getGoVersions() ([]string, error) {
 		return nil, err
 	}
 
-	versions := make([]string, 0)
+	goVersions := make([]string, 0)
 	doc.Find(".toggleButton").Each(func(i int, s *goquery.Selection) {
-		version := s.Find("span").Text()
+		goVersion := s.Find("span").Text()
 		
 		// Match versions from go1.16 ahead
 		r := regexp.MustCompile(`^go(\d+)\.(1[6-9]|[2-9]\d+)(?:\.(\d+))?$`)
-		if r.MatchString(version) {
-			versions = append(versions, version)
+		if r.MatchString(goVersion) {
+			goVersions = append(goVersions, goVersion)
 		}
 	})
 
-	versions = slices.Compact(versions)
-	slices.Sort(versions)
-	slices.Reverse(versions)
+	goVersions = slices.Compact(goVersions)
+	slices.Sort(goVersions)
+	slices.Reverse(goVersions)
 
-	return versions, nil
+	return goVersions, nil
 }
