@@ -207,13 +207,13 @@ func main() {
 		)),
 	)
 
-	goVersionsPopUp := goVersionsPopUp(myWindow.Canvas())
+	goVersionPopUp := goVersionPopUp(myWindow.Canvas())
 
 	shortcuts := widget.NewButton("Shortcuts", nil)
 	about := widget.NewButton("About RunGo", nil)
 	version := widget.NewButton("Go 1.21.4", func() {
-		goVersionsPopUp.Resize(fyne.NewSize(440, 540))
-		goVersionsPopUp.Show()
+		goVersionPopUp.Resize(fyne.NewSize(440, 540))
+		goVersionPopUp.Show()
 	})
 
 	myWindow.SetContent(desktopLayout(tabs, shortcuts, about, version))
