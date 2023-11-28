@@ -1,6 +1,6 @@
 /*
-	SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
-	SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
+SPDX-License-Identifier: MIT
 */
 package main
 
@@ -17,6 +17,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
@@ -24,6 +25,12 @@ import (
 const APP_DIR string = ".run-go"
 const SNIPPETS_DIR string = "snippets"
 const GOS_DIR string = ".gos"
+
+const ALT_T = "CustomDesktop:Alt+T"
+
+var (
+	altT = &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifierAlt}
+)
 
 func init() {
 	home, err := os.UserHomeDir()
@@ -196,17 +203,7 @@ func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("RunGo")
 	
-	tabs := container.NewAppTabs(
-		container.NewTabItem("Tab 1", container.NewGridWithColumns(2,
-			widget.NewEntry(),
-			widget.NewLabel("Output"),
-		)),
-		container.NewTabItem("Tab 2", container.NewGridWithColumns(2,
-			widget.NewEntry(),
-			widget.NewLabel("Output"),
-		)),
-	)
-
+	tabs := appTabs()
 	goVersionPopUp := goVersionPopUp(myWindow.Canvas())
 
 	shortcuts := widget.NewButton("Shortcuts", nil)
@@ -216,7 +213,8 @@ func main() {
 		goVersionPopUp.Show()
 	})
 
-	myWindow.SetContent(desktopLayout(tabs, shortcuts, about, version))
+	myWindow.Canvas().AddShortcut(altT, tabs.TypedShortcut)
+	myWindow.SetContent(desktopLayout(tabs.AppTabs, shortcuts, about, version))
 	myWindow.Resize(fyne.NewSize(1280, 720))
 	myWindow.ShowAndRun()
 }
