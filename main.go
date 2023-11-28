@@ -218,6 +218,17 @@ func init() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+
+	// Set the OS and the ARCH of the user's system for later use
+	if err := os.Setenv("RUNGO_OS", goos); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if err := os.Setenv("RUNGO_ARCH", goarch); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 
 var (
