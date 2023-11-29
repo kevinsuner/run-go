@@ -17,6 +17,7 @@ func appTabs(canvas fyne.Canvas) *tabs {
 
 	output := binding.NewString()
 	snippet := binding.NewString()
+	snippetList := binding.NewStringList()
 
 	editor := playgroundEditor(output, snippet)
 	console := playgroundConsole(output)
@@ -66,6 +67,7 @@ func (t *tabs) TypedShortcut(shortcut fyne.Shortcut) {
 func newTab(appTabs *container.AppTabs, canvas fyne.Canvas) *container.TabItem {
 	output := binding.NewString()
 	snippet := binding.NewString()
+	snippetList := binding.NewStringList()
 
 	editor := playgroundEditor(output, snippet)
 	console := playgroundConsole(output)
