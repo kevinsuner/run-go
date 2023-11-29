@@ -27,10 +27,14 @@ const SNIPPETS_DIR string = "snippets"
 const GOS_DIR string = ".gos"
 
 const ALT_T = "CustomDesktop:Alt+T"
+const ALT_S = "CustomDesktop:Alt+S"
+const ALT_O = "CustomDesktop:Alt+O"
+const ALT_RETURN = "CustomDesktop:Alt+Return"
 
-var (
-	altT = &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifierAlt}
-)
+var altT = &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifierAlt}
+var altS = &desktop.CustomShortcut{KeyName: fyne.KeyS, Modifier: fyne.KeyModifierAlt}
+var altO = &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: fyne.KeyModifierAlt}
+var altReturn = &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierAlt}
 
 func init() {
 	home, err := os.UserHomeDir()
@@ -203,7 +207,7 @@ func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("RunGo")
 	
-	tabs := appTabs()
+	tabs := appTabs(myWindow.Canvas())
 	goVersionPopUp := goVersionPopUp(myWindow.Canvas())
 
 	shortcuts := widget.NewButton("Shortcuts", nil)
