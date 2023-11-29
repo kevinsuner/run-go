@@ -60,7 +60,7 @@ func goVersionPopUp(canvas fyne.Canvas) *widget.PopUp {
 				},
 				func(id widget.ListItemID, obj fyne.CanvasObject) {
 					button := obj.(*widget.Button)
-					button.SetText(goVersions[id].String())
+					button.SetText(fmt.Sprintf("go%s", goVersions[id].String()))
 					button.Alignment = widget.ButtonAlignLeading
 					button.OnTapped = func() {
 						appDir := fmt.Sprintf("%s/%s", os.Getenv("RUNGO_HOME"), APP_DIR)
