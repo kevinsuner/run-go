@@ -8,6 +8,8 @@ import (
 	"os"
 	"regexp"
 	"slices"
+	"sort"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -15,6 +17,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/hashicorp/go-version"
 )
 
 func goVersionPopUp(canvas fyne.Canvas) *widget.PopUp {
@@ -57,7 +60,7 @@ func goVersionPopUp(canvas fyne.Canvas) *widget.PopUp {
 				},
 				func(id widget.ListItemID, obj fyne.CanvasObject) {
 					button := obj.(*widget.Button)
-					button.SetText(goVersions[id])
+					button.SetText(goVersions[id].String())
 					button.Alignment = widget.ButtonAlignLeading
 					button.OnTapped = func() {
 						appDir := fmt.Sprintf("%s/%s", os.Getenv("RUNGO_HOME"), APP_DIR)
@@ -113,7 +116,7 @@ func goVersionPopUp(canvas fyne.Canvas) *widget.PopUp {
 	return goVersionPopUp
 }
 
-func getGoVersions() ([]string, error) {
+func getGoVersions() ([]*version.Version, error) {
 	// This should be cached, I'm doing some webscraping, yes,
 	// but I'm not a complete dick
 	resp, err := http.Get(GO_DOWNLOADS_URL)
@@ -131,20 +134,30 @@ func getGoVersions() ([]string, error) {
 		return nil, err
 	}
 
-	goVersions := make([]string, 0)
+	goVersionsRaw := make([]string, 0)
 	doc.Find(".toggleButton").Each(func(i int, s *goquery.Selection) {
 		goVersion := s.Find("span").Text()
 		
-		// Match versions from go1.16 ahead
+		// Match versions from go1.16 ahead and remove the leading "go" prefix
 		r := regexp.MustCompile(`^go(\d+)\.(1[6-9]|[2-9]\d+)(?:\.(\d+))?$`)
 		if r.MatchString(goVersion) {
-			goVersions = append(goVersions, goVersion)
+			goVersionsRaw = append(goVersionsRaw, strings.TrimPrefix(goVersion, "go"))
 		}
 	})
 
-	goVersions = slices.Compact(goVersions)
-	slices.Sort(goVersions)
-	slices.Reverse(goVersions)
+	goVersionsRaw = slices.Compact(goVersionsRaw)
 
+	goVersions := make([]*version.Version, len(goVersionsRaw))
+	for i, raw := range goVersionsRaw {
+		v, err := version.NewVersion(raw)
+		if err != nil {
+			return nil, err
+		}
+
+		goVersions[i] = v
+	}
+
+	sort.Sort(version.Collection(goVersions))
+	slices.Reverse(version.Collection(goVersions))
 	return goVersions, nil
 }
