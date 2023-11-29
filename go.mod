@@ -2,11 +2,14 @@ module run-go
 
 go 1.21.0
 
-require fyne.io/fyne/v2 v2.4.1
+require (
+	fyne.io/fyne/v2 v2.4.1
+	github.com/PuerkitoBio/goquery v1.8.1
+	golang.org/x/mod v0.14.0
+)
 
 require (
 	fyne.io/systray v1.10.1-0.20230722100817-88df1e0ffa9a // indirect
-	github.com/PuerkitoBio/goquery v1.8.1 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fredbi/uri v1.0.0 // indirect
@@ -20,7 +23,6 @@ require (
 	github.com/go-text/typesetting v0.0.0-20230616162802-9c17dd34aa4a // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
-	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
