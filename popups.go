@@ -21,6 +21,67 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+type shortcuts struct {
+	shortcut string
+	info string
+}
+
+func shortcutsPopUp(canvas fyne.Canvas) *widget.PopUp {
+	shortcuts := []shortcuts{
+		{shortcut: "Alt+T", info: "Open a new tab"},
+		{shortcut: "Alt+S", info: "Open save snippet modal"},
+		{shortcut: "Alt+O", info: "Open load snippet modal"},
+		{shortcut: "Alt+Return", info: "Run code from editor"},
+	}
+
+	table := widget.NewTable(
+		func() (rows int, cols int) {
+			return len(shortcuts), 2
+		},
+		func() fyne.CanvasObject {
+			return widget.NewLabel("template")
+		},
+		func(id widget.TableCellID, obj fyne.CanvasObject) {
+			switch id.Col {
+			case 0:
+				obj.(*widget.Label).SetText(shortcuts[id.Row].shortcut)
+			case 1:
+				obj.(*widget.Label).SetText(shortcuts[id.Row].info)
+			}
+		},
+	)
+	table.SetColumnWidth(0, 200)
+	table.SetColumnWidth(1, 200)
+
+
+	var shortcutsPopUp *widget.PopUp
+	shortcutsPopUp = widget.NewModalPopUp(container.NewBorder(
+		// Insanity again
+		container.NewPadded(container.NewGridWithColumns(12,
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			widget.NewButtonWithIcon("", theme.CancelIcon(), func() {
+				shortcutsPopUp.Hide()
+			}),
+		)),
+		nil,
+		nil,
+		nil,
+		container.NewPadded(table),
+	), canvas)
+
+	return shortcutsPopUp
+}
+
 func goVersionPopUp(
 	canvas fyne.Canvas,  
 	goVersionBtn *widget.Button, 
