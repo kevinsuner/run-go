@@ -21,7 +21,11 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-func goVersionPopUp(canvas fyne.Canvas) *widget.PopUp {
+func goVersionPopUp(
+	canvas fyne.Canvas,  
+	goVersionBtn *widget.Button, 
+	goVersionStr binding.String,
+) *widget.PopUp {
 	goVersions, err := getGoVersions()
 	if err != nil {
 		// Should display a modal with the error and in (debug) mode
@@ -106,7 +110,12 @@ func goVersionPopUp(canvas fyne.Canvas) *widget.PopUp {
 						)); err != nil {
 							log.Fatalln(err)
 						}
+						
+						goVersionStr.Set(goVersions[id])
+						version, err := goVersionStr.Get()
+						if err != nil { log.Fatalln(err) }
 
+						goVersionBtn.SetText(version)
 						goVersionPopUp.Hide()
 					}
 				},
