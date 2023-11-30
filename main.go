@@ -231,7 +231,15 @@ func main() {
 		},
 	)
 
-	about := widget.NewButtonWithIcon("About RunGo", theme.InfoIcon(), func() {})
+	aboutPopUp := aboutPopUp(myWindow.Canvas())
+	about := widget.NewButtonWithIcon(
+		"About RunGo", 
+		theme.InfoIcon(), 
+		func() {
+			aboutPopUp.Resize(fyne.NewSize(440, 540))
+			aboutPopUp.Show()
+		},
+	)
 	
 	// This part is a bit weird, will need to be revisited
 	goVersionStr := binding.NewString()
