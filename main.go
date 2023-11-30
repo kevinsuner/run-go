@@ -221,6 +221,19 @@ func main() {
 	
 	tabs := appTabs(myWindow.Canvas())
 
+	shortcutsPopUp := shortcutsPopUp(myWindow.Canvas())
+	shortcuts := widget.NewButtonWithIcon(
+		"Shortcuts", 
+		theme.ContentRedoIcon(), 
+		func() {
+			shortcutsPopUp.Resize(fyne.NewSize(440, 540))
+			shortcutsPopUp.Show()
+		},
+	)
+
+	about := widget.NewButtonWithIcon("About RunGo", theme.InfoIcon(), func() {})
+	
+	// This part is a bit weird, will need to be revisited
 	goVersionStr := binding.NewString()
 	goVersion := widget.NewButtonWithIcon(
 		bareGoVersion, 
@@ -230,14 +243,8 @@ func main() {
 			versionPopUp.Show()
 		},
 	)
-	versionPopUp = goVersionPopUp(
-		myWindow.Canvas(), 
-		goVersion, 
-		goVersionStr,
-	)
 
-	shortcuts := widget.NewButtonWithIcon("Shortcuts", theme.ContentRedoIcon(), func() {})
-	about := widget.NewButtonWithIcon("About RunGo", theme.InfoIcon(), func() {})
+	versionPopUp = goVersionPopUp(myWindow.Canvas(), goVersion, goVersionStr)
 
 	myWindow.Canvas().AddShortcut(altT, tabs.TypedShortcut)
 	myWindow.SetContent(desktopLayout(tabs.AppTabs, shortcuts, about, goVersion))
