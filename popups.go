@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"slices"
@@ -80,6 +81,56 @@ func shortcutsPopUp(canvas fyne.Canvas) *widget.PopUp {
 	), canvas)
 
 	return shortcutsPopUp
+}
+
+func aboutPopUp(canvas fyne.Canvas) *widget.PopUp {
+	text := `
+RunGo is a free cross-platform Go playground, that allows the user to experiment, prototype and get instant feedback. It provides support for running Go versions from 1.16+, and is built on top of Fyne, a cross-platform GUI toolkit made with Go and insipred by Material Design.
+
+MIT License
+Copyright (c) 2023 Kevin Suñer
+	`
+
+	label := widget.NewLabel(text)
+	label.Wrapping = fyne.TextWrap(fyne.TextWrapBreak)
+
+	fyneURL, _ := url.Parse("https://github.com/fyne-io/fyne/blob/master/LICENSE")
+	goQueryURL, _ := url.Parse("https://github.com/PuerkitoBio/goquery/blob/master/LICENSE")
+	runGoURL, _ := url.Parse("https://github.com/itsksrof/run-go")
+
+	var aboutPopUp *widget.PopUp
+	aboutPopUp = widget.NewModalPopUp(container.NewBorder(
+		// Insanity again
+		container.NewPadded(container.NewGridWithColumns(12,
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			layout.NewSpacer(),
+			widget.NewButtonWithIcon("", theme.CancelIcon(), func() {
+				aboutPopUp.Hide()
+			}),
+		)),
+		nil,
+		nil,
+		nil,
+		container.NewPadded(
+			container.NewVBox(
+				label,
+				widget.NewHyperlink("Fyne.io BSD 3-Clause License", fyneURL),
+				widget.NewHyperlink("goquery BSD 3-Clause License", goQueryURL),
+				widget.NewHyperlink("RunGo GitHub Repository", runGoURL),
+			),
+		),
+	), canvas)
+
+	return aboutPopUp
 }
 
 func goVersionPopUp(
