@@ -17,8 +17,10 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -35,6 +37,9 @@ var altT = &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifie
 var altS = &desktop.CustomShortcut{KeyName: fyne.KeyS, Modifier: fyne.KeyModifierAlt}
 var altO = &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: fyne.KeyModifierAlt}
 var altReturn = &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierAlt}
+
+var osAndArchGoVersion string
+var bareGoVersion string
 
 func init() {
 	home, err := os.UserHomeDir()
@@ -74,19 +79,19 @@ func init() {
 		log.Fatalln(err)
 	}
 
-	goVersion, err := checkLatestGoVersion()
+	osAndArchGoVersion, bareGoVersion, err = checkLatestGoVersion()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	_, err = os.ReadDir(fmt.Sprintf("%s/%s", gosDir, goVersion))
+	_, err = os.ReadDir(fmt.Sprintf("%s/%s", gosDir, osAndArchGoVersion))
 	if os.IsNotExist(err) {
-		if err := downloadGoTarball(goVersion, appDir); err != nil {
+		if err := downloadGoTarball(osAndArchGoVersion, appDir); err != nil {
 			log.Fatalln(err)
 		}
 
 		if err := untar(
-			fmt.Sprintf("%s/%s.tar.gz", appDir, goVersion),
+			fmt.Sprintf("%s/%s.tar.gz", appDir, osAndArchGoVersion),
 			gosDir,
 		); err != nil {
 			log.Fatalln(err)
@@ -94,14 +99,14 @@ func init() {
 
 		if err := os.Rename(
 			fmt.Sprintf("%s/%s", gosDir, "go"),
-			fmt.Sprintf("%s/%s", gosDir, goVersion),
+			fmt.Sprintf("%s/%s", gosDir, osAndArchGoVersion),
 		); err != nil {
 			log.Fatalln(err)
 		}
 
 		if err := os.Remove(fmt.Sprintf("%s/%s.tar.gz",
 			appDir,
-			goVersion,
+			osAndArchGoVersion,
 		)); err != nil {
 			log.Fatalln(err)
 		}
@@ -109,7 +114,7 @@ func init() {
 
 	if err := os.Setenv("RUNGO_GOBIN", fmt.Sprintf("%s/%s/bin/go",
 		gosDir,
-		goVersion,
+		osAndArchGoVersion,
 	)); err != nil {
 		log.Fatalln(err)
 	}
@@ -160,27 +165,28 @@ func getOSAndArch() error {
 	return nil
 }
 
-func checkLatestGoVersion() (string, error) {
+func checkLatestGoVersion() (string, string, error) {
 	resp, err := http.Get("https://go.dev/VERSION?m=text")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", err
+		return "", "", err
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
+	version := strings.Split(string(body), "\n")[0]
 	return fmt.Sprintf("%s.%s-%s",
-		strings.Split(string(body), "\n")[0],
+		version,
 		os.Getenv("RUNGO_OS"),
 		os.Getenv("RUNGO_ARCH"),
-	), nil	
+	), version, nil
 }
 
 func desktopLayout(
@@ -189,14 +195,18 @@ func desktopLayout(
 ) *fyne.Container {
 	return container.NewBorder(
 		nil,
-		container.NewPadded(container.NewGridWithColumns(3,
-			container.NewGridWithColumns(2,
+		container.NewPadded(
+			container.NewGridWithColumns(8,
 				shortcuts,
 				about,
+				layout.NewSpacer(),
+				layout.NewSpacer(),
+				layout.NewSpacer(),
+				layout.NewSpacer(),
+				layout.NewSpacer(),
+				version,
 			),
-			layout.NewSpacer(),
-			version,
-		)),
+		),
 		nil,
 		nil,
 		container.NewPadded(tabs),
@@ -204,21 +214,33 @@ func desktopLayout(
 }
 
 func main() {
+	var versionPopUp *widget.PopUp
+
 	myApp := app.New()
 	myWindow := myApp.NewWindow("RunGo")
 	
 	tabs := appTabs(myWindow.Canvas())
-	goVersionPopUp := goVersionPopUp(myWindow.Canvas())
 
-	shortcuts := widget.NewButton("Shortcuts", nil)
-	about := widget.NewButton("About RunGo", nil)
-	version := widget.NewButton("Go 1.21.4", func() {
-		goVersionPopUp.Resize(fyne.NewSize(440, 540))
-		goVersionPopUp.Show()
-	})
+	goVersionStr := binding.NewString()
+	goVersion := widget.NewButtonWithIcon(
+		bareGoVersion, 
+		theme.ConfirmIcon(), 
+		func() {
+			versionPopUp.Resize(fyne.NewSize(440, 540))
+			versionPopUp.Show()
+		},
+	)
+	versionPopUp = goVersionPopUp(
+		myWindow.Canvas(), 
+		goVersion, 
+		goVersionStr,
+	)
+
+	shortcuts := widget.NewButtonWithIcon("Shortcuts", theme.ContentRedoIcon(), func() {})
+	about := widget.NewButtonWithIcon("About RunGo", theme.InfoIcon(), func() {})
 
 	myWindow.Canvas().AddShortcut(altT, tabs.TypedShortcut)
-	myWindow.SetContent(desktopLayout(tabs.AppTabs, shortcuts, about, version))
+	myWindow.SetContent(desktopLayout(tabs.AppTabs, shortcuts, about, goVersion))
 	myWindow.Resize(fyne.NewSize(1280, 720))
 	myWindow.ShowAndRun()
 }
