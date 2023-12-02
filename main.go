@@ -1,6 +1,6 @@
 /*
-SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
-SPDX-License-Identifier: MIT
+	SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
+	SPDX-License-Identifier: MIT
 */
 package main
 
@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"runtime"
@@ -22,40 +21,57 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"go.uber.org/zap"
 )
 
-const APP_DIR string = ".run-go"
-const SNIPPETS_DIR string = "snippets"
-const GOS_DIR string = ".gos"
+const (
+	APP_DIR			= ".run-go"
+	SNIPPETS_DIR	= "snippets"
+	GOS_DIR			= ".gos"
 
-const ALT_T = "CustomDesktop:Alt+T"
-const ALT_S = "CustomDesktop:Alt+S"
-const ALT_O = "CustomDesktop:Alt+O"
-const ALT_RETURN = "CustomDesktop:Alt+Return"
+	ALT_T		= "CustomDesktop:Alt+T"
+	ALT_S		= "CustomDesktop:Alt+S"
+	ALT_O		= "CustomDesktop:Alt+O"
+	ALT_RETURN	= "CustomDesktop:Alt+Return"
 
-var altT = &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifierAlt}
-var altS = &desktop.CustomShortcut{KeyName: fyne.KeyS, Modifier: fyne.KeyModifierAlt}
-var altO = &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: fyne.KeyModifierAlt}
-var altReturn = &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierAlt}
+	GO_URL = "https://go.dev/dl"
+)
 
-var osAndArchGoVersion string
-var bareGoVersion string
+var (
+	errUnsupportedOS	= errors.New("unsupported operating system")
+	errUnsupportedArch	= errors.New("unsupported processor architecture")
+	errRequestFailed	= errors.New("failed to perform http request")
+	errUnexpectedStatus = errors.New("received an unexpected http status code")
+
+	altT		= &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifierAlt}
+	altS		= &desktop.CustomShortcut{KeyName: fyne.KeyS, Modifier: fyne.KeyModifierAlt}
+	altO		= &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: fyne.KeyModifierAlt}
+	altReturn	= &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierAlt}
+
+	osAndArchGoVersion	string
+	bareGoVersion		string
+
+	logger *zap.SugaredLogger
+)
 
 func init() {
+	zapL, _ := zap.NewProduction()
+	logger = zapL.Sugar()	
+
 	home, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatalw("os.UserHomeDir()", "error", err.Error())
 	}
 
 	if err := os.Setenv("RUNGO_HOME", home); err != nil {
-		log.Fatalln(err)
+		logger.Fatalw("os.Setenv()", "error", err.Error())
 	}
 
 	appDir := fmt.Sprintf("%s/%s", home, APP_DIR)
 	_, err = os.ReadDir(appDir)
 	if os.IsNotExist(err) {
 		if err := os.Mkdir(appDir, 0755); err != nil {
-			log.Fatalln(err)
+			logger.Fatalw("os.Mkdir()", "error", err.Error())
 		}
 	}
 
@@ -63,7 +79,7 @@ func init() {
 	_, err = os.ReadDir(snippetsDir)
 	if os.IsNotExist(err) {
 		if err := os.Mkdir(snippetsDir, 0755); err != nil {
-			log.Fatalln(err)
+			logger.Fatalw("os.Mkdir()", "error", err.Error())
 		}
 	}
 
@@ -71,44 +87,48 @@ func init() {
 	_, err = os.ReadDir(gosDir)
 	if os.IsNotExist(err) {
 		if err := os.Mkdir(gosDir, 0755); err != nil {
-			log.Fatalln(err)
+			logger.Fatalw("os.Mkdir()", "error", err.Error())	
 		}
 	}
 
-	if err := getOSAndArch(); err != nil {
-		log.Fatalln(err)
+	if err := setOSAndArch(); err != nil {
+		logger.Fatalw("setOSAndArch()", "error", err.Error())
 	}
 
-	osAndArchGoVersion, bareGoVersion, err = checkLatestGoVersion()
+	// TODO: Shouldn't fail on this one, could be a network error
+	// and default to the latest Go version that is installed
+	osAndArchGoVersion, bareGoVersion, err = getLatestGoVersion()
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatalw("checkLatestGoVersion()", "error", err.Error())
 	}
 
 	_, err = os.ReadDir(fmt.Sprintf("%s/%s", gosDir, osAndArchGoVersion))
 	if os.IsNotExist(err) {
-		if err := downloadGoTarball(osAndArchGoVersion, appDir); err != nil {
-			log.Fatalln(err)
+		// TODO: As the previous one, this shouldn't fail, and instead
+		// default to the latest Go version that is installed
+		if err := getGoTarball(osAndArchGoVersion, appDir); err != nil {
+			logger.Fatalw("getGoTarball()", "error", err.Error())
 		}
 
-		if err := untar(
+		if err := untarFile(
 			fmt.Sprintf("%s/%s.tar.gz", appDir, osAndArchGoVersion),
 			gosDir,
 		); err != nil {
-			log.Fatalln(err)
+			logger.Fatalw("untarFile()", "error", err.Error())
 		}
 
 		if err := os.Rename(
 			fmt.Sprintf("%s/%s", gosDir, "go"),
 			fmt.Sprintf("%s/%s", gosDir, osAndArchGoVersion),
 		); err != nil {
-			log.Fatalln(err)
+			logger.Fatalw("os.Rename()", "error", err.Error())
 		}
 
 		if err := os.Remove(fmt.Sprintf("%s/%s.tar.gz",
 			appDir,
 			osAndArchGoVersion,
 		)); err != nil {
-			log.Fatalln(err)
+			logger.Fatalw("os.Remove()", "error", err.Error())
 		}
 	}
 
@@ -116,56 +136,55 @@ func init() {
 		gosDir,
 		osAndArchGoVersion,
 	)); err != nil {
-		log.Fatalln(err)
+		logger.Fatalw("os.Setenv()", "error", err.Error())
 	}
 }
 
-func getOSAndArch() error {
-	var goos, goarch string
-
-	unsupportedOS := errors.New("unsupported operating system")
-	unsupportedArch := errors.New("unsupported processor architecture")
+func setOSAndArch() error {
+	var (
+		osys, arch string
+	)
 	
 	switch runtime.GOOS {
 	case "darwin":
-		goos = runtime.GOOS
+		osys = runtime.GOOS
 		if runtime.GOARCH == "arm64" {
-			goarch = runtime.GOARCH
+			arch = runtime.GOARCH
 		} else if runtime.GOARCH == "amd64" {
-			goarch = runtime.GOARCH
+			arch = runtime.GOARCH
 		} else {
-			return unsupportedArch
+			return errUnsupportedArch
 		}
 	case "linux":
-		goos = runtime.GOOS
+		osys = runtime.GOOS
 		if runtime.GOARCH == "amd64" {
-			goarch = runtime.GOARCH
+			arch = runtime.GOARCH
 		} else {
-			return unsupportedArch
+			return errUnsupportedArch
 		}
 	case "windows":
-		goos = runtime.GOOS
+		osys = runtime.GOOS
 		if runtime.GOARCH == "amd64" {
-			goarch = runtime.GOARCH
+			arch = runtime.GOARCH
 		} else {
-			return unsupportedArch
+			return errUnsupportedArch
 		}
 	default:
-		return unsupportedOS
+		return errUnsupportedOS
 	}
 
-	if err := os.Setenv("RUNGO_OS", goos); err != nil {
+	if err := os.Setenv("RUNGO_OS", osys); err != nil {
 		return err
 	}
 
-	if err := os.Setenv("RUNGO_ARCH", goarch); err != nil {
+	if err := os.Setenv("RUNGO_ARCH", arch); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func checkLatestGoVersion() (string, string, error) {
+func getLatestGoVersion() (string, string, error) {
 	resp, err := http.Get("https://go.dev/VERSION?m=text")
 	if err != nil {
 		return "", "", err
@@ -189,73 +208,70 @@ func checkLatestGoVersion() (string, string, error) {
 	), version, nil
 }
 
-func desktopLayout(
+func main() {
+	var (
+		shortcutsModal, aboutModal, versionModal *widget.PopUp
+	)
+
+	myApp := app.New()
+	myWindow := myApp.NewWindow("RunGo")
+	
+	appTabs := newAppTabs(myWindow)
+
+	shortcutsBtn := widget.NewButtonWithIcon("Shortcuts",
+		theme.ContentRedoIcon(),
+		func() {
+			shortcutsModal.Resize(fyne.NewSize(440, 540))
+			shortcutsModal.Show()
+		},
+	)
+
+	aboutBtn := widget.NewButtonWithIcon("About RunGo",
+		theme.InfoIcon(),
+		func() {
+			aboutModal.Resize(fyne.NewSize(440, 540))
+			aboutModal.Show()
+		},
+	)
+
+	versionBtn := widget.NewButtonWithIcon(bareGoVersion,
+		theme.ConfirmIcon(),
+		func() {
+			versionModal.Resize(fyne.NewSize(440, 540))
+			versionModal.Show()
+		},
+	)
+
+	shortcutsModal = newShortcutsModal(myWindow.Canvas(), customShortcuts)
+	aboutModal = newAboutModal(myWindow.Canvas(), "")
+	versionModal = newVersionModal(myWindow, versionBtn, binding.NewString())
+	
+	myWindow.Canvas().AddShortcut(altT, appTabs.TypedShortcut)
+	myWindow.SetContent(appLayout(appTabs.AppTabs, shortcutsBtn, aboutBtn, versionBtn))
+	myWindow.Resize(fyne.NewSize(1280, 720))
+	myWindow.ShowAndRun()
+}
+
+func appLayout(
 	tabs *container.AppTabs, 
-	shortcuts, about, version *widget.Button,
+	shortcutsBtn, aboutBtn, versionBtn *widget.Button,
 ) *fyne.Container {
 	return container.NewBorder(
 		nil,
 		container.NewPadded(
 			container.NewGridWithColumns(8,
-				shortcuts,
-				about,
+				shortcutsBtn,
+				aboutBtn,
 				layout.NewSpacer(),
 				layout.NewSpacer(),
 				layout.NewSpacer(),
 				layout.NewSpacer(),
 				layout.NewSpacer(),
-				version,
+				versionBtn,
 			),
 		),
 		nil,
 		nil,
 		container.NewPadded(tabs),
 	)
-}
-
-func main() {
-	var versionPopUp *widget.PopUp
-
-	myApp := app.New()
-	myWindow := myApp.NewWindow("RunGo")
-	
-	tabs := appTabs(myWindow.Canvas())
-
-	shortcutsPopUp := shortcutsPopUp(myWindow.Canvas())
-	shortcuts := widget.NewButtonWithIcon(
-		"Shortcuts", 
-		theme.ContentRedoIcon(), 
-		func() {
-			shortcutsPopUp.Resize(fyne.NewSize(440, 540))
-			shortcutsPopUp.Show()
-		},
-	)
-
-	aboutPopUp := aboutPopUp(myWindow.Canvas())
-	about := widget.NewButtonWithIcon(
-		"About RunGo", 
-		theme.InfoIcon(), 
-		func() {
-			aboutPopUp.Resize(fyne.NewSize(440, 540))
-			aboutPopUp.Show()
-		},
-	)
-	
-	// This part is a bit weird, will need to be revisited
-	goVersionStr := binding.NewString()
-	goVersion := widget.NewButtonWithIcon(
-		bareGoVersion, 
-		theme.ConfirmIcon(), 
-		func() {
-			versionPopUp.Resize(fyne.NewSize(440, 540))
-			versionPopUp.Show()
-		},
-	)
-
-	versionPopUp = goVersionPopUp(myWindow.Canvas(), goVersion, goVersionStr)
-
-	myWindow.Canvas().AddShortcut(altT, tabs.TypedShortcut)
-	myWindow.SetContent(desktopLayout(tabs.AppTabs, shortcuts, about, goVersion))
-	myWindow.Resize(fyne.NewSize(1280, 720))
-	myWindow.ShowAndRun()
 }
