@@ -1,3 +1,7 @@
+/*
+	SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
+	SPDX-License-Identifier: MIT
+*/
 package main
 
 import (
@@ -7,89 +11,69 @@ import (
 	"fyne.io/fyne/v2/driver/desktop"
 )
 
-type tabs struct {
-	canvas fyne.Canvas
+type customAppTabs struct {
+	window fyne.Window
 	*container.AppTabs
 }
 
-func appTabs(canvas fyne.Canvas) *tabs {
-	tabs := &tabs{canvas: canvas}
+func newAppTabs(window fyne.Window) *customAppTabs {
+	var (
+		output = binding.NewString()
+		snippet = binding.NewString()
+		snippetList = binding.NewStringList()
+	)
 
-	output := binding.NewString()
-	snippet := binding.NewString()
-	snippetList := binding.NewStringList()
+	appTabs := &customAppTabs{window: window}
 
 	editor := playgroundEditor(output, snippet)
 	console := playgroundConsole(output)
 
-	tabs.AppTabs = container.NewAppTabs(
+	appTabs.AppTabs = container.NewAppTabs(
 		container.NewTabItem("New snippet", container.NewGridWithColumns(2,
 			editor,
 			console,
 		)),
 	)
 
-	saveSnippetPopUp := saveSnippetPopUp(
-		&editor.Entry, 
-		tabs.AppTabs, 
-		snippet, 
-		canvas,
-	)
-
-	loadSnippetPopUp := loadSnippetPopUp(
-		&editor.Entry,
-		tabs.AppTabs,
-		snippet,
-		snippetList,
-		canvas,
-	)
+	saveModal := newSaveModal(&editor.Entry, appTabs.AppTabs, snippet, window)
+	openModal := newOpenModal(&editor.Entry, appTabs.AppTabs, snippet, snippetList, window)
 	
-	canvas.AddShortcut(altReturn, editor.Entry.TypedShortcut)
-	canvas.AddShortcut(altS, saveSnippetPopUp.TypedShortcut)
-	canvas.AddShortcut(altO, loadSnippetPopUp.TypedShortcut)
+	window.Canvas().AddShortcut(altReturn, editor.Entry.TypedShortcut)
+	window.Canvas().AddShortcut(altS, saveModal.TypedShortcut)
+	window.Canvas().AddShortcut(altO, openModal.TypedShortcut)
 
-	return tabs
+	return appTabs
 }
 
-func (t *tabs) TypedShortcut(shortcut fyne.Shortcut) {
+func (c *customAppTabs) TypedShortcut(shortcut fyne.Shortcut) {
 	customShortcut, ok := shortcut.(*desktop.CustomShortcut)
 	if !ok {
-		t.TypedShortcut(shortcut)
+		c.TypedShortcut(shortcut)
 		return
 	}
 
 	switch customShortcut.ShortcutName() {
 	case ALT_T:
-		t.Append(newTab(t.AppTabs, t.canvas))
+		c.Append(newTab(c.AppTabs, c.window))
 	}
 }
 
-func newTab(appTabs *container.AppTabs, canvas fyne.Canvas) *container.TabItem {
-	output := binding.NewString()
-	snippet := binding.NewString()
-	snippetList := binding.NewStringList()
+func newTab(appTabs *container.AppTabs, window fyne.Window) *container.TabItem {
+	var (
+		output = binding.NewString()
+		snippet = binding.NewString()
+		snippetList = binding.NewStringList()
+	)
 
 	editor := playgroundEditor(output, snippet)
 	console := playgroundConsole(output)
 
-	saveSnippetPopUp := saveSnippetPopUp(
-		&editor.Entry, 
-		appTabs, 
-		snippet, 
-		canvas,
-	)
+	saveModal := newSaveModal(&editor.Entry, appTabs, snippet, window)
+	openModal := newOpenModal(&editor.Entry, appTabs, snippet, snippetList, window)
 
-	loadSnippetPopUp := loadSnippetPopUp(
-		&editor.Entry,
-		appTabs,
-		snippet,
-		snippetList,
-		canvas,
-	)
-	
-	canvas.AddShortcut(altReturn, editor.Entry.TypedShortcut)
-	canvas.AddShortcut(altS, saveSnippetPopUp.TypedShortcut)
-	canvas.AddShortcut(altO, loadSnippetPopUp.TypedShortcut)
+	window.Canvas().AddShortcut(altReturn, editor.Entry.TypedShortcut)
+	window.Canvas().AddShortcut(altS, saveModal.TypedShortcut)
+	window.Canvas().AddShortcut(altO, openModal.TypedShortcut)
 
 	return container.NewTabItem("New snippet", container.NewGridWithColumns(2,
 		editor,
