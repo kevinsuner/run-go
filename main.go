@@ -54,6 +54,28 @@ var (
 	logger *zap.SugaredLogger
 )
 
+var aboutMD = `
+RunGo is a free cross-platform Go playground, that allows users to experiment,
+prototype and get instant feedback. It provides support for running Go versions
+from 1.16+, and is built on top of [Fyne](https://fyne.io), a cross-platform GUI
+toolkit made with Go and inspired by Material Design.
+
+RunGo is mainly built using the following open-source projects:
+- [Golang BSD 3-Clause License](https://github.com/golang/go/blob/master/LICENSE)
+- [Fyne BSD 3-Clause License](https://github.com/fyne-io/fyne/blob/master/LICENSE)
+- [goquery BSD 3-Clause License](https://github.com/PuerkitoBio/goquery/blob/master/LICENSE)
+
+I've only included those who are a direct dependency of the project, but if you
+wish to have a complete list of the projects being used, head to RunGo's **go.mod** file.
+
+If you wish to implement a feature that you feel is missing, or want to hack
+for a bit and work on some open issues, you can do so by checking out the **CONTRIBUTING.md** file.
+
+[RunGo](https://github.com/itsksrof/run-go) is licensed under the **MIT License**
+
+Copyright (c) 2023 Kevin Suñer
+`
+
 func init() {
 	zapL, _ := zap.NewProduction()
 	logger = zapL.Sugar()	
@@ -243,7 +265,7 @@ func main() {
 	)
 
 	shortcutsModal = newShortcutsModal(myWindow.Canvas(), customShortcuts)
-	aboutModal = newAboutModal(myWindow.Canvas(), "")
+	aboutModal = newAboutModal(myWindow.Canvas(), aboutMD)
 	versionModal = newVersionModal(myWindow, versionBtn, binding.NewString())
 	
 	myWindow.Canvas().AddShortcut(altT, appTabs.TypedShortcut)
