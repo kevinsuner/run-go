@@ -180,6 +180,15 @@ func newVersionModal(
 
 					_, err := os.ReadDir(fmt.Sprintf("%s/%s", gosDir, version))
 					if os.IsNotExist(err) {
+						// NOTE: Ideally this should represent a real progress bar
+						progress := dialog.NewCustomWithoutButtons(
+							fmt.Sprintf("Downloading %s", version),
+							container.NewPadded(widget.NewProgressBarInfinite()),
+							window,
+						)
+						progress.Show()
+						defer progress.Hide()
+
 						if err := getGoTarball(version, appDir); err != nil {
 							logger.Fatalw("getGoTarball()", "error", err.Error())
 						}
@@ -203,9 +212,10 @@ func newVersionModal(
 						); err != nil {
 							logger.Fatalw("os.Remove()", "error", err.Error())
 						}
+
 					}
 
-					if err := os.Setenv("RUNGO_BIN",
+					if err := os.Setenv("RUNGO_GOBIN",
 						fmt.Sprintf("%s/%s/bin/go", gosDir, version),
 					); err != nil {
 						logger.Fatalw("os.Setenv()", "error", err.Error())
