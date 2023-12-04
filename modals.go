@@ -180,7 +180,7 @@ func newVersionModal(
 
 					_, err := os.ReadDir(fmt.Sprintf("%s/%s", gosDir, version))
 					if os.IsNotExist(err) {
-						// NOTE: Ideally this should represent a real progress bar
+						// TODO: Ideally this should represent a real progress bar
 						progress := dialog.NewCustomWithoutButtons(
 							fmt.Sprintf("Downloading %s", version),
 							container.NewPadded(widget.NewProgressBarInfinite()),
@@ -281,8 +281,9 @@ func newSaveModal(
 			widget.NewButtonWithIcon("Save", theme.ConfirmIcon(), func() {
 				if err := newSnippet(input.Text, []byte(entry.Text)); err != nil {
 					if errors.Is(err, os.ErrExist) {
-						dialog.NewInformation("An error occurred", err.Error(), window)
+						dialog.NewInformation("An error occurred", err.Error(), window).Show()
 						logger.Errorw("newSnippet()", "error", err.Error())
+						return
 					} else {
 						logger.Fatalw("newSnippet()", "error", err.Error())
 					}
@@ -348,7 +349,7 @@ func newOpenModal(
 			layout.NewSpacer(),
 			layout.NewSpacer(),
 			widget.NewButtonWithIcon("", theme.CancelIcon(), func() {
-				openModal.Show()
+				openModal.Hide()
 			}),
 		)),
 		nil,
@@ -372,17 +373,17 @@ func newOpenModal(
 				button.Alignment = widget.ButtonAlignLeading
 				button.OnTapped = func() {
 					if len(entry.Text) != 0 {
-						dialog.NewInformation("Info", "Tab already in use", window)
+						dialog.NewInformation("Info", "Tab already in use", window).Show()
 						logger.Warnw("user attempted to open snippet in used tab")
-						openModal.Hide()
 						return
 					}
 
 					data, err := openSnippet(button.Text)
 					if err != nil {
 						if errors.Is(err, os.ErrNotExist) {
-							dialog.NewInformation("An error occurred", err.Error(), window)
+							dialog.NewInformation("An error occurred", err.Error(), window).Show()
 							logger.Errorw("openSnippet()", "error", err.Error())
+							return
 						} else {
 							logger.Fatalw("openSnippet()", "error", err.Error())
 						}
