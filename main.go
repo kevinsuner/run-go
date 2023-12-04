@@ -68,8 +68,8 @@ RunGo is mainly built using the following open-source projects:
 I've only included those who are a direct dependency of the project, but if you
 wish to have a complete list of the projects being used, head to RunGo's **go.mod** file.
 
-If you wish to implement a feature that you feel is missing, or want to hack
-for a bit and work on some open issues, you can do so by checking out the **CONTRIBUTING.md** file.
+If you wish to hack for a bit and work on some open issues, you can do so by checking out
+the **CONTRIBUTING.md** file.
 
 [RunGo](https://github.com/itsksrof/run-go) is licensed under the **MIT License**
 
