@@ -89,6 +89,9 @@ func newAboutModal(canvas fyne.Canvas, content string) *widget.PopUp {
 		aboutModal *widget.PopUp
 	)
 
+	mdText := widget.NewRichTextFromMarkdown(content)
+	mdText.Wrapping = fyne.TextWrap(fyne.TextWrapBreak)
+
 	aboutModal = widget.NewModalPopUp(container.NewBorder(
 		container.NewPadded(container.NewGridWithColumns(12,
 			layout.NewSpacer(),
@@ -109,7 +112,7 @@ func newAboutModal(canvas fyne.Canvas, content string) *widget.PopUp {
 		nil,
 		nil,
 		nil,
-		container.NewPadded(widget.NewRichTextFromMarkdown(content)),
+		container.NewPadded(mdText),
 	), canvas)
 
 	return aboutModal
