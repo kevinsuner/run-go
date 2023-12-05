@@ -35,3 +35,4 @@ jobs:
         goversion: "https://dl.google.com/go/go${{ env.GO_VERSION }}.linux-amd64.tar.gz"
         binary_name: "${{ env.BINARY_NAME }}-${{ matrix.goos }}-${{ matrix.goarch }}"
         extra_files: LICENSE README.md
+        build_flags: "CGO_ENABLED=1 CC=gcc"
