@@ -1,11 +1,11 @@
 # Compile RunGo for Linux/Windows AMD64
-FROM ubuntu:latest AS linux-windows-amd64
+FROM debian:latest AS linux-windows-amd64
 
 WORKDIR /app
 
 # Update and install packages
 RUN apt-get update
-RUN apt-get install -y -q curl libgl1-mesa-dev xorg-dev
+RUN apt-get install -y -q curl xz-utils libgl1-mesa-dev xorg-dev
 
 # Install Go
 RUN curl -OL https://go.dev/dl/go1.21.0.linux-amd64.tar.gz
