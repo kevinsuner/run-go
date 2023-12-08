@@ -7,11 +7,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
-	"runtime"
-	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -42,19 +38,11 @@ var (
 	errUnsupportedArch	= errors.New("unsupported processor architecture")
 	errRequestFailed	= errors.New("failed to perform http request")
 	errUnexpectedStatus = errors.New("received an unexpected http status code")
-	errUnknownFileExt	= errors.New("file has an unknown extension")
 
 	altT		= &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifierAlt}
 	altS		= &desktop.CustomShortcut{KeyName: fyne.KeyS, Modifier: fyne.KeyModifierAlt}
 	altO		= &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: fyne.KeyModifierAlt}
 	altReturn	= &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierAlt}
-
-	// TODO: Find another way to do this, I feel like I'm overusing
-	// global variables way too much
-	osAndArchGoVersion	string
-	bareGoVersion		string
-	goFileExt			string
-	goBinaryExt			string
 
 	logger *zap.SugaredLogger
 )
@@ -90,10 +78,6 @@ func init() {
 		logger.Fatalw("os.UserHomeDir()", "error", err.Error())
 	}
 
-	if err := os.Setenv("RUNGO_HOME", home); err != nil {
-		logger.Fatalw("os.Setenv()", "error", err.Error())
-	}
-
 	appDir := fmt.Sprintf("%s/%s", home, APP_DIR)
 	_, err = os.ReadDir(appDir)
 	if os.IsNotExist(err) {
@@ -118,130 +102,55 @@ func init() {
 		}
 	}
 
-	if err := setOSAndArch(); err != nil {
-		logger.Fatalw("setOSAndArch()", "error", err.Error())
+	osys, arch, err := getOSAndArch()
+	if err != nil {
+		logger.Fatalw("getOSAndArch()", "error", err.Error())
 	}
 
 	// TODO: Shouldn't fail on this one, could be a network error
 	// and default to the latest Go version that is installed
-	osAndArchGoVersion, bareGoVersion, err = getLatestGoVersion()
+	version, err := getLatestGoVersion()
 	if err != nil {
-		logger.Fatalw("checkLatestGoVersion()", "error", err.Error())
+		logger.Fatalw("getLatestGoVersion()", "error", err.Error())
 	}
 
-	_, err = os.ReadDir(fmt.Sprintf("%s/%s", gosDir, osAndArchGoVersion))
+	_, err = os.ReadDir(fmt.Sprintf("%s/%s.%s-%s", gosDir, version, osys, arch))
 	if os.IsNotExist(err) {
 		// TODO: As the previous one, this shouldn't fail, and instead
 		// default to the latest Go version that is installed
-		if err := getGoFile(osAndArchGoVersion, goFileExt, appDir); err != nil {
-			logger.Fatalw("getGoFile()", "error", err.Error())
+		if err := getGoSource(
+			fmt.Sprintf("%s.%s-%s", version, osys, arch),
+			osys,
+			appDir,
+		); err != nil {
+			logger.Fatalw("getGoSource()", "error", err.Error())
 		}
 
-		if err := extractFile(
-			fmt.Sprintf("%s/%s%s", appDir, osAndArchGoVersion, goFileExt),
+		if err := extractGoSource(
+			fmt.Sprintf("%s.%s-%s", version, osys, arch),
+			osys,
+			appDir,
 			gosDir,
 		); err != nil {
-			logger.Fatalw("extractFile()", "error", err.Error())
+			logger.Fatalw("extractGoSource()", "error", err.Error())
 		}
 
 		if err := os.Rename(
 			fmt.Sprintf("%s/%s", gosDir, "go"),
-			fmt.Sprintf("%s/%s", gosDir, osAndArchGoVersion),
+			fmt.Sprintf("%s/%s.%s-%s", gosDir, version, osys, arch),
 		); err != nil {
 			logger.Fatalw("os.Rename()", "error", err.Error())
 		}
-
-		if err := os.Remove(fmt.Sprintf("%s/%s%s",
-			appDir,
-			osAndArchGoVersion,
-			goFileExt,
-		)); err != nil {
-			logger.Fatalw("os.Remove()", "error", err.Error())
-		}
 	}
 
-	if err := os.Setenv("RUNGO_GOBIN", fmt.Sprintf("%s/%s/bin/go%s",
-		gosDir,
-		osAndArchGoVersion,
-		goBinaryExt,
-	)); err != nil {
-		logger.Fatalw("os.Setenv()", "error", err.Error())
+	if err := setEnvVariables(home, version, osys, arch); err != nil {
+		logger.Fatalw("setEnvVariables()", "error", err.Error())
 	}
-}
-
-func setOSAndArch() error {
-	var (
-		osys, arch string
-	)
-	
-	switch runtime.GOOS {
-	case "darwin":
-		osys = runtime.GOOS
-		goFileExt = ".tar.gz"
-		if runtime.GOARCH == "arm64" {
-			arch = runtime.GOARCH
-		} else if runtime.GOARCH == "amd64" {
-			arch = runtime.GOARCH
-		} else {
-			return errUnsupportedArch
-		}
-	case "linux":
-		osys = runtime.GOOS
-		goFileExt = ".tar.gz"
-		if runtime.GOARCH == "amd64" {
-			arch = runtime.GOARCH
-		} else {
-			return errUnsupportedArch
-		}
-	case "windows":
-		osys = runtime.GOOS
-		goFileExt, goBinaryExt = ".zip", ".exe"
-		if runtime.GOARCH == "amd64" {
-			arch = runtime.GOARCH
-		} else {
-			return errUnsupportedArch
-		}
-	default:
-		return errUnsupportedOS
-	}
-
-	if err := os.Setenv("RUNGO_OS", osys); err != nil {
-		return err
-	}
-
-	if err := os.Setenv("RUNGO_ARCH", arch); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func getLatestGoVersion() (string, string, error) {
-	resp, err := http.Get("https://go.dev/VERSION?m=text")
-	if err != nil {
-		return "", "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", "", err
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", "", err
-	}
-
-	version := strings.Split(string(body), "\n")[0]
-	return fmt.Sprintf("%s.%s-%s",
-		version,
-		os.Getenv("RUNGO_OS"),
-		os.Getenv("RUNGO_ARCH"),
-	), version, nil
 }
 
 func main() {
 	var (
+		version = os.Getenv("RUNGO_GO_VER")
 		shortcutsModal, aboutModal, versionModal *widget.PopUp
 	)
 
@@ -266,7 +175,7 @@ func main() {
 		},
 	)
 
-	versionBtn := widget.NewButtonWithIcon(bareGoVersion,
+	versionBtn := widget.NewButtonWithIcon(version,
 		theme.ConfirmIcon(),
 		func() {
 			versionModal.Resize(fyne.NewSize(440, 540))
