@@ -25,30 +25,6 @@ but in a much more efficient way. After that the decision was clear as day and I
 set out to learn how to make desktop applications, because, I had and (still have)
 no idea on how I could do it :)
 
-## Building RunGo
-To build RunGo you will firstly need to install Fyne, you can do so by heading to
-their [Getting Started](https://developer.fyne.io/started/) page, from there follow
-the steps laid out in the guide, and then comeback.
-
-After installing Fyne, clone the repository with the following command:
-```sh
-git clone https://github.com/itsksrof/run-go
-```
-
-And inside the directory run `make build`. This will automatically generate
-a binary of the program for your operating system and architecture.
-
-Beware that at the moment the playground only supports the following operating
-system and architecture combinations:
-
-| Operating System | Processor Architecture |
-| ---------------- | ---------------------- |
-| Darwin | ARM64, AMD64 |
-| Linux | AMD64 |
-| Windows | AMD64 |
-
-More processor architectures will be supported in the near future.
-
 ## Next Steps
 Currently RunGo is in a pre-alpha state, the core functionallity is working, as you
 are able to run Go code from 1.16 and beyond, create new tabs save snippets and open
@@ -98,8 +74,57 @@ new "map" and sets its value by accessing the first "map".
 Fixes #1234
 ```
 
+### Fetching the source from Github
+RunGo uses the Go modules support built into Go 1.11 to build. The easiest is to clone RunGo in a directory outside of `GOPATH`,
+as in the following example:
+```bash
+mkdir $HOME/src
+cd $HOME/src
+git clone https://github.com/itsksrof/run-go
+cd run-go
+```
+
+Now, to make a change to RunGo's source:
+1. Create a new branch for your changes (the branch name is arbitrary):
+    ```bash
+    git checkout -b abc123
+    ```
+2. After making your changes, commit them to your new branch:
+    ```bash
+    git commit -a -v
+    ```
+3. Fork RunGo in Github
+4. Add your fork as a new remote (the remote name, "foo" in this example, is arbitrary):
+    ```bash
+    git remote add git@github.com:USERNAME/run-go.git
+    ```
+5. Push the changes to your new remote
+    ```bash
+    git push --set-upstream foo abc123
+    ```
+6. You are now ready to submit a PR based upon the new branch in your forked repository
+
+### Building RunGo with your changes
+Prerequisites to build RunGo from source:
+- [Go 1.21](https://go.dev/dl) or later
+- [Fyne](https://developer.fyne.io/started/)
+- [Podman](https://podman.io/get-started)
+
+To perform a complete build, meaning compiling RunGo for Linux/AMD64/ARM64 and Windows/AMD64
+run the following commands:
+```bash
+podman build -v ~/repos/run-go/:/run-go:rw --arch=amd64 --target=linux-windows-amd64 .
+podman build -v ~/repos/run-go/:/run-go:rw --arch=arm64 --target=linux-arm64 .
+```
+
+To perform a development build use the `go build .` command
+
 ## Credits
 RunGo makes use of a variety of open-source projects including:
 - [github.com/fyne-io/fyne](github.com/fyne-io/fyne)
 - [github.com/PuerkitoBio/goquery](github.com/PuerkitoBio/goquery)
 - [github.com/golang/mod](github.com/golang/mod)
+- [github.com/ziglang/zig](github.com/ziglang/zig)
+- [github.com/containers/podman](github.com/containers/podman)
+- [github.com/Debian](github.com/Debian)
+- [github.com/docker](github.com/docker)
