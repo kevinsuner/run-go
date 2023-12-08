@@ -1,3 +1,7 @@
+/*
+	SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
+	SPDX-License-Identifier: MIT
+*/
 package main
 
 import (
