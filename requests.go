@@ -17,8 +17,8 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-func getGoTarball(version, dst string) error {
-	res, err := http.Get(fmt.Sprintf("%s/%s.tar.gz", GO_URL, version))
+func getGoFile(version, ext, dst string) error {
+	res, err := http.Get(fmt.Sprintf("%s/%s%s", GO_URL, version, ext))
 	if err != nil {
 		return fmt.Errorf("%w: %v", errRequestFailed, err)
 	}
@@ -28,7 +28,7 @@ func getGoTarball(version, dst string) error {
 		return fmt.Errorf("%w: %s", errUnexpectedStatus, err)
 	}
 
-	out, err := os.Create(fmt.Sprintf("%s/%s.tar.gz", dst, version))
+	out, err := os.Create(fmt.Sprintf("%s/%s%s", dst, version, ext))
 	if err != nil {
 		return err
 	}
