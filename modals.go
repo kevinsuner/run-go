@@ -1,6 +1,6 @@
 /*
-	SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
-	SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
+SPDX-License-Identifier: MIT
 */
 package main
 
@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -32,10 +33,7 @@ var customShortcuts = []customShortcut{
 }
 
 func newShortcutsModal(canvas fyne.Canvas, shortcuts []customShortcut) *widget.PopUp {
-	var (
-		shortcutsModal *widget.PopUp
-	)
-
+	var shortcutsModal *widget.PopUp
 	shortcutsTable := widget.NewTable(
 		func() (int, int) {
 			// N rows by 2 cols
@@ -85,10 +83,7 @@ func newShortcutsModal(canvas fyne.Canvas, shortcuts []customShortcut) *widget.P
 }
 
 func newAboutModal(canvas fyne.Canvas, content string) *widget.PopUp {
-	var (
-		aboutModal *widget.PopUp
-	)
-
+	var aboutModal *widget.PopUp
 	mdText := widget.NewRichTextFromMarkdown(content)
 	mdText.Wrapping = fyne.TextWrap(fyne.TextWrapBreak)
 
@@ -125,9 +120,9 @@ func newVersionModal(
 ) *widget.PopUp {
 	var (
 		versionModal *widget.PopUp
-		home = os.Getenv("RUNGO_HOME")
-		osys = os.Getenv("RUNGO_OS")
-		arch = os.Getenv("RUNGO_ARCH")
+		appDir = os.Getenv("RUNGO_APP_DIR")
+		osys = runtime.GOOS
+		arch = runtime.GOARCH
 	)
 
 	versions, err := getGoVersions()
@@ -177,7 +172,6 @@ func newVersionModal(
 				button.SetText(versions[lid])
 				button.Alignment = widget.ButtonAlignLeading
 				button.OnTapped = func() {
-					appDir := fmt.Sprintf("%s/%s", home, APP_DIR)
 					gosDir := fmt.Sprintf("%s/%s", appDir, GOS_DIR)
 					version := fmt.Sprintf("%s.%s-%s", button.Text, osys, arch)
 
@@ -192,15 +186,21 @@ func newVersionModal(
 						progress.Show()
 						defer progress.Hide()
 
-						if err := getGoFile(version, goFileExt, appDir); err != nil {
-							logger.Fatalw("getGoFile()", "error", err.Error())
+						if err := getGoSource(
+							version,
+							osys,
+							appDir,
+						); err != nil {
+							logger.Fatalw("getGoSource()", "error", err.Error())
 						}
 
-						if err := extractFile(
-							fmt.Sprintf("%s/%s%s", appDir, version, goFileExt),
+						if err := extractGoSource(
+							version,
+							osys,
+							appDir,
 							gosDir,
 						); err != nil {
-							logger.Fatalw("extractFile()", "error", err.Error())
+							logger.Fatalw("extractGoSource()", "error", err.Error())
 						}
 
 						if err := os.Rename(
@@ -209,19 +209,14 @@ func newVersionModal(
 						); err != nil {
 							logger.Fatalw("os.Rename()", "error", err.Error())
 						}
-
-						if err := os.Remove(
-							fmt.Sprintf("%s/%s%s", appDir, version, goFileExt),
-						); err != nil {
-							logger.Fatalw("os.Remove()", "error", err.Error())
-						}
-
 					}
 
-					if err := os.Setenv("RUNGO_GOBIN",
-						fmt.Sprintf("%s/%s/bin/go%s", gosDir, version, goBinaryExt),
+					if err := updateGoBinEnvVariable(
+						gosDir,
+						version,
+						osys,
 					); err != nil {
-						logger.Fatalw("os.Setenv()", "error", err.Error())
+						logger.Fatalw("updateGoBinEnvVariable()", "error", err.Error())
 					}
 
 					if err := versionStr.Set(versions[lid]); err != nil {
