@@ -32,6 +32,8 @@ snippets. But there are much more things that I wish to add and polish, below is
 list of the features and improvements that I want to implement in RunGo before moving 
 to the alpha stage.
 
+- [ ] Improve usage of global variables throughout the project
+- [ ] Use Makefile for linting and performing the development build
 - [ ] Proper code editor with line numbers, indentation and syntax highlighting
 - [ ] Autocomplete engine for the code editor
 - [ ] Minor improvements
