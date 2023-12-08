@@ -42,6 +42,7 @@ var (
 	errUnsupportedArch	= errors.New("unsupported processor architecture")
 	errRequestFailed	= errors.New("failed to perform http request")
 	errUnexpectedStatus = errors.New("received an unexpected http status code")
+	errUnknownFileExt	= errors.New("file has an unknown extension")
 
 	altT		= &desktop.CustomShortcut{KeyName: fyne.KeyT, Modifier: fyne.KeyModifierAlt}
 	altS		= &desktop.CustomShortcut{KeyName: fyne.KeyS, Modifier: fyne.KeyModifierAlt}
@@ -50,6 +51,8 @@ var (
 
 	osAndArchGoVersion	string
 	bareGoVersion		string
+	goFileExt			string
+	goBinaryExt			string
 
 	logger *zap.SugaredLogger
 )
@@ -128,15 +131,15 @@ func init() {
 	if os.IsNotExist(err) {
 		// TODO: As the previous one, this shouldn't fail, and instead
 		// default to the latest Go version that is installed
-		if err := getGoTarball(osAndArchGoVersion, appDir); err != nil {
-			logger.Fatalw("getGoTarball()", "error", err.Error())
+		if err := getGoFile(osAndArchGoVersion, goFileExt, appDir); err != nil {
+			logger.Fatalw("getGoFile()", "error", err.Error())
 		}
 
-		if err := untarFile(
-			fmt.Sprintf("%s/%s.tar.gz", appDir, osAndArchGoVersion),
+		if err := extractFile(
+			fmt.Sprintf("%s/%s%s", appDir, osAndArchGoVersion, goFileExt),
 			gosDir,
 		); err != nil {
-			logger.Fatalw("untarFile()", "error", err.Error())
+			logger.Fatalw("extractFile()", "error", err.Error())
 		}
 
 		if err := os.Rename(
@@ -146,17 +149,19 @@ func init() {
 			logger.Fatalw("os.Rename()", "error", err.Error())
 		}
 
-		if err := os.Remove(fmt.Sprintf("%s/%s.tar.gz",
+		if err := os.Remove(fmt.Sprintf("%s/%s%s",
 			appDir,
 			osAndArchGoVersion,
+			goFileExt,
 		)); err != nil {
 			logger.Fatalw("os.Remove()", "error", err.Error())
 		}
 	}
 
-	if err := os.Setenv("RUNGO_GOBIN", fmt.Sprintf("%s/%s/bin/go",
+	if err := os.Setenv("RUNGO_GOBIN", fmt.Sprintf("%s/%s/bin/go%s",
 		gosDir,
 		osAndArchGoVersion,
+		goBinaryExt,
 	)); err != nil {
 		logger.Fatalw("os.Setenv()", "error", err.Error())
 	}
@@ -170,6 +175,7 @@ func setOSAndArch() error {
 	switch runtime.GOOS {
 	case "darwin":
 		osys = runtime.GOOS
+		goFileExt = ".tar.gz"
 		if runtime.GOARCH == "arm64" {
 			arch = runtime.GOARCH
 		} else if runtime.GOARCH == "amd64" {
@@ -179,6 +185,7 @@ func setOSAndArch() error {
 		}
 	case "linux":
 		osys = runtime.GOOS
+		goFileExt = ".tar.gz"
 		if runtime.GOARCH == "amd64" {
 			arch = runtime.GOARCH
 		} else {
@@ -186,6 +193,7 @@ func setOSAndArch() error {
 		}
 	case "windows":
 		osys = runtime.GOOS
+		goFileExt, goBinaryExt = ".zip", ".exe"
 		if runtime.GOARCH == "amd64" {
 			arch = runtime.GOARCH
 		} else {
