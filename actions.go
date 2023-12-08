@@ -18,7 +18,7 @@ func runFromEditor(data []byte) (string, error) {
 		return "", err
 	}
 
-	output, _ := exec.Command(os.Getenv("RUNGO_GOBIN"), "run", f).
+	output, _ := exec.Command(os.Getenv("RUNGO_GO_BIN"), "run", f).
 					CombinedOutput()
 
 	if err := os.Remove(f); err != nil {
@@ -29,9 +29,8 @@ func runFromEditor(data []byte) (string, error) {
 }
 
 func runFromSnippet(snippet string, data []byte) (string, error) {
-	dir := fmt.Sprintf("%s/%s/%s/%s",
-		os.Getenv("RUNGO_HOME"),
-		APP_DIR,
+	dir := fmt.Sprintf("%s/%s/%s",
+		os.Getenv("RUNGO_APP_DIR"),
 		SNIPPETS_DIR,
 		snippet,
 	)
@@ -41,13 +40,13 @@ func runFromSnippet(snippet string, data []byte) (string, error) {
 		return "", err
 	}
 
-	cmd := exec.Command(os.Getenv("RUNGO_GOBIN"), "mod", "tidy")
+	cmd := exec.Command(os.Getenv("RUNGO_GO_BIN"), "mod", "tidy")
 	cmd.Dir = dir
 	if err := cmd.Run(); err != nil {
 		return "", err
 	}
 
-	cmd = exec.Command(os.Getenv("RUNGO_GOBIN"), "run", "main.go")
+	cmd = exec.Command(os.Getenv("RUNGO_GO_BIN"), "run", "main.go")
 	cmd.Dir = dir
 	output, _ := cmd.CombinedOutput()
 
@@ -55,9 +54,8 @@ func runFromSnippet(snippet string, data []byte) (string, error) {
 }
 
 func newSnippet(snippet string, data []byte) error {
-	dir := fmt.Sprintf("%s/%s/%s/%s",
-		os.Getenv("RUNGO_HOME"),
-		APP_DIR,
+	dir := fmt.Sprintf("%s/%s/%s",
+		os.Getenv("RUNGO_APP_DIR"),
 		SNIPPETS_DIR,
 		snippet,
 	)
@@ -66,7 +64,7 @@ func newSnippet(snippet string, data []byte) error {
 		return err
 	}
 
-	cmd := exec.Command(os.Getenv("RUNGO_GOBIN"), "mod", "init", snippet)
+	cmd := exec.Command(os.Getenv("RUNGO_GO_BIN"), "mod", "init", snippet)
 	cmd.Dir = dir
 	if err := cmd.Run(); err != nil {
 		return err
@@ -81,9 +79,8 @@ func newSnippet(snippet string, data []byte) error {
 }
 
 func listSnippets() ([]string, error) {
-	dir := fmt.Sprintf("%s/%s/%s",
-		os.Getenv("RUNGO_HOME"),
-		APP_DIR,
+	dir := fmt.Sprintf("%s/%s",
+		os.Getenv("RUNGO_APP_DIR"),
 		SNIPPETS_DIR,
 	)
 
@@ -112,9 +109,8 @@ func listSnippets() ([]string, error) {
 }
 
 func openSnippet(snippet string) (string, error) {
-	dir := fmt.Sprintf("%s/%s/%s/%s",
-		os.Getenv("RUNGO_HOME"),
-		APP_DIR,
+	dir := fmt.Sprintf("%s/%s/%s",
+		os.Getenv("RUNGO_APP_DIR"),
 		SNIPPETS_DIR,
 		snippet,
 	)
