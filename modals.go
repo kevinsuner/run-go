@@ -192,15 +192,15 @@ func newVersionModal(
 						progress.Show()
 						defer progress.Hide()
 
-						if err := getGoTarball(version, appDir); err != nil {
-							logger.Fatalw("getGoTarball()", "error", err.Error())
+						if err := getGoFile(version, goFileExt, appDir); err != nil {
+							logger.Fatalw("getGoFile()", "error", err.Error())
 						}
 
-						if err := untarFile(
-							fmt.Sprintf("%s/%s.tar.gz", appDir, version),
+						if err := extractFile(
+							fmt.Sprintf("%s/%s%s", appDir, version, goFileExt),
 							gosDir,
 						); err != nil {
-							logger.Fatalw("untar()", "error", err.Error())
+							logger.Fatalw("extractFile()", "error", err.Error())
 						}
 
 						if err := os.Rename(
@@ -211,7 +211,7 @@ func newVersionModal(
 						}
 
 						if err := os.Remove(
-							fmt.Sprintf("%s/%s.tar.gz", appDir, version),
+							fmt.Sprintf("%s/%s%s", appDir, version, goFileExt),
 						); err != nil {
 							logger.Fatalw("os.Remove()", "error", err.Error())
 						}
@@ -219,7 +219,7 @@ func newVersionModal(
 					}
 
 					if err := os.Setenv("RUNGO_GOBIN",
-						fmt.Sprintf("%s/%s/bin/go", gosDir, version),
+						fmt.Sprintf("%s/%s/bin/go%s", gosDir, version, goBinaryExt),
 					); err != nil {
 						logger.Fatalw("os.Setenv()", "error", err.Error())
 					}
