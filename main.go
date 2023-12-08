@@ -49,6 +49,8 @@ var (
 	altO		= &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: fyne.KeyModifierAlt}
 	altReturn	= &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierAlt}
 
+	// TODO: Find another way to do this, I feel like I'm overusing
+	// global variables way too much
 	osAndArchGoVersion	string
 	bareGoVersion		string
 	goFileExt			string
