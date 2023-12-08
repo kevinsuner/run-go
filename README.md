@@ -1,6 +1,4 @@
 <h1 align="left">RunGo</h1>
-<br />
-
 RunGo is a free cross-platform Go playground that allows users to experiment,
 prototype and get instant feedback. It provides support for running Go versions
 from 1.16+, and is built on top of [Fyne](https://fyne.io), a cross-platform GUI
@@ -8,6 +6,14 @@ toolkit made with Go and inspired by Material Design.
 
 [![Go Version](https://img.shields.io/github/go-mod/go-version/itsksrof/run-go)](https://github.com/itsksrof/run-go/blob/master/go.mod)
 [![License](https://img.shields.io/github/license/itsksrof/run-go)](https://github.com/itsksrof/run-go/blob/master/LICENSE)
+
+---
+
+<p align="center">
+    <kbd><img src="https://i.postimg.cc/qBctFYWq/run-go-screenshot.png" alt="RunGo Screenshot" title="RunGo Screenshot"/></kbd>
+</p>
+
+---
 
 ## Motivation
 The idea behind RunGo basically emerged from me being lazy. I wanted to try out
