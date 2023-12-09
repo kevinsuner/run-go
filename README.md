@@ -41,7 +41,7 @@ list of the features and improvements that I want to implement in RunGo before m
 to the alpha stage.
 
 - [x] Improve usage of global variables throughout the project
-- [ ] Use Makefile for linting and performing the development build
+- [x] Use Makefile for linting and performing the development build
 - [ ] Proper code editor with line numbers, indentation and syntax highlighting
 - [ ] Autocomplete engine for the code editor
 - [ ] Minor improvements
@@ -118,23 +118,16 @@ Now, to make a change to RunGo's source:
 Prerequisites to build RunGo from source:
 - [Go 1.21](https://go.dev/dl) or later
 - [Fyne](https://developer.fyne.io/started/)
-- [Podman](https://podman.io/get-started)
+- [GNU Make](https://www.gnu.org/software/make/)
+- [GNU Tar](https://www.gnu.org/software/tar/)
+- [Podman](https://podman.io/get-started) or [Docker](https://www.docker.com/get-started/)
 
-To perform a complete build, meaning compiling RunGo for Linux/AMD64/ARM64 and Windows/AMD64
-run the following commands:
-```bash
-podman build -v ~/repos/run-go/:/run-go:rw --arch=amd64 --target=linux-windows-amd64 .
-podman build -v ~/repos/run-go/:/run-go:rw --arch=arm64 --target=linux-arm64 .
-```
-
-To perform a development build use the `go build .` command
+Run the command `make` for a full list of targets. 
 
 ## Credits
 RunGo makes use of a variety of open-source projects including:
-- [github.com/fyne-io/fyne](github.com/fyne-io/fyne)
-- [github.com/PuerkitoBio/goquery](github.com/PuerkitoBio/goquery)
-- [github.com/golang/mod](github.com/golang/mod)
-- [github.com/ziglang/zig](github.com/ziglang/zig)
-- [github.com/containers/podman](github.com/containers/podman)
-- [github.com/Debian](github.com/Debian)
-- [github.com/docker](github.com/docker)
+- [github.com/golang/go](https://github.com/golang/go)
+- [github.com/fyne-io/fyne](https://github.com/fyne-io/fyne)
+- [github.com/PuerkitoBio/goquery](https://github.com/PuerkitoBio/goquery)
+- [github.com/golang/mod](https://github.com/golang/mod)
+- [github.com/fyne-io/fyne-cross](https://github.com/fyne-io/fyne-cross)
