@@ -1,6 +1,7 @@
 .PHONY: help
 
 help:
+	# Thanks rici :) -> https://stackoverflow.com/users/1566221/rici
 	@awk '/^#/{c=substr($$0,3);next}c&&/^[[:alpha:]][[:alnum:]_-]+:/{print substr($$1,1,index($$1,":")),c}1{c=0}' $(MAKEFILE_LIST) | column -s: -t
 
 # Build and run the application
@@ -25,7 +26,7 @@ build-darwin:
 	@fyne-cross darwin -macosx-version-min="11.3" -macosx-sdk-path="./MacOSX11.3.sdk" -arch=amd64,arm64
 	@echo ">>> Cleaning up before finishing"
 	rm MacOSX11.3.sdk.tar.xz
-	rm MacOSX11.3.sdk 
+	rm -r MacOSX11.3.sdk 
 
 # Build the application for Windows (amd64)
 build-windows:
