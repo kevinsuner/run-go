@@ -1,13 +1,20 @@
 /*
-	SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
-	SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
+SPDX-License-Identifier: MIT
 */
 package main
 
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -21,9 +28,9 @@ import (
 )
 
 const (
-	APP_DIR			= ".run-go"
+	APP_DIR			= "run-go"
+	GOS_DIR			= "gos"
 	SNIPPETS_DIR	= "snippets"
-	GOS_DIR			= ".gos"
 
 	ALT_T		= "CustomDesktop:Alt+T"
 	ALT_S		= "CustomDesktop:Alt+S"
@@ -34,8 +41,6 @@ const (
 )
 
 var (
-	errUnsupportedOS	= errors.New("unsupported operating system")
-	errUnsupportedArch	= errors.New("unsupported processor architecture")
 	errRequestFailed	= errors.New("failed to perform http request")
 	errUnexpectedStatus = errors.New("received an unexpected http status code")
 
@@ -44,7 +49,7 @@ var (
 	altO		= &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: fyne.KeyModifierAlt}
 	altReturn	= &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: fyne.KeyModifierAlt}
 
-	logger *zap.SugaredLogger
+	logger *zap.Logger
 )
 
 var aboutMD = `
@@ -70,133 +75,115 @@ Copyright (c) 2023 Kevin Suñer
 `
 
 func init() {
-	zapL, _ := zap.NewProduction()
-	logger = zapL.Sugar()	
-
-	home, err := os.UserHomeDir()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		logger.Fatalw("os.UserHomeDir()", "error", err.Error())
+		log.Fatalln(err)
 	}
 
-	appDir := fmt.Sprintf("%s/%s", home, APP_DIR)
-	_, err = os.ReadDir(appDir)
-	if os.IsNotExist(err) {
-		if err := os.Mkdir(appDir, 0755); err != nil {
-			logger.Fatalw("os.Mkdir()", "error", err.Error())
-		}
-	}
-
-	snippetsDir := fmt.Sprintf("%s/%s", appDir, SNIPPETS_DIR)
-	_, err = os.ReadDir(snippetsDir)
-	if os.IsNotExist(err) {
-		if err := os.Mkdir(snippetsDir, 0755); err != nil {
-			logger.Fatalw("os.Mkdir()", "error", err.Error())
-		}
-	}
-
-	gosDir := fmt.Sprintf("%s/%s", appDir, GOS_DIR)
-	_, err = os.ReadDir(gosDir)
-	if os.IsNotExist(err) {
-		if err := os.Mkdir(gosDir, 0755); err != nil {
-			logger.Fatalw("os.Mkdir()", "error", err.Error())	
-		}
-	}
-
-	osys, arch, err := getOSAndArch()
+	zapLogger := zap.NewProductionConfig()
+	zapLogger.OutputPaths = []string{filepath.Join(homeDir, APP_DIR, "run-go.log")}
+	logger, err = zapLogger.Build()
 	if err != nil {
-		logger.Fatalw("getOSAndArch()", "error", err.Error())
+		log.Fatalln(err)
 	}
 
-	// TODO: Shouldn't fail on this one, could be a network error
-	// and default to the latest Go version that is installed
+	appDirs := []string{
+		filepath.Join(homeDir, APP_DIR),
+		filepath.Join(homeDir, APP_DIR, GOS_DIR),
+		filepath.Join(homeDir, APP_DIR, SNIPPETS_DIR),
+	}
+	
+	for _, appDir := range appDirs {
+		_, err = os.ReadDir(appDir)
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(appDir, 0755)
+			if err != nil {
+				logger.Fatal("os.MkdirAll()", zap.Error(err))
+			}
+		}
+	}
+
+	getLatestGoVersion := func() (string, error) {
+		res, err := http.Get(path.Join(GO_URL, "VERSION?m=text"))
+		if err != nil {
+			return "", fmt.Errorf("%w: %v", errRequestFailed, err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("%w: %s", errUnexpectedStatus, res.Status)
+		}
+
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			return "", err
+		}
+
+		return strings.Split(string(body), "\n")[0], nil
+	}
+
 	version, err := getLatestGoVersion()
 	if err != nil {
-		logger.Fatalw("getLatestGoVersion()", "error", err.Error())
+		logger.Fatal("getLatestGoVersion()", zap.Error(err))
 	}
 
-	_, err = os.ReadDir(fmt.Sprintf("%s/%s.%s-%s", gosDir, version, osys, arch))
+	longVersion := fmt.Sprintf("%s.%s-%s", version, runtime.GOOS, runtime.GOARCH)
+	_, err = os.ReadDir(filepath.Join(homeDir, APP_DIR, GOS_DIR, longVersion))
 	if os.IsNotExist(err) {
-		// TODO: As the previous one, this shouldn't fail, and instead
-		// default to the latest Go version that is installed
-		if err := getGoSource(
-			fmt.Sprintf("%s.%s-%s", version, osys, arch),
-			osys,
-			appDir,
-		); err != nil {
-			logger.Fatalw("getGoSource()", "error", err.Error())
+		switch runtime.GOOS {
+		case "windows":
+			err = getGoSource(fmt.Sprintf("%s.%s", longVersion, ".zip"), filepath.Join(homeDir, APP_DIR))
+			if err != nil {
+				logger.Fatal("getGoSource()", zap.Error(err))
+			}
+	
+			err = uncompressZipFile(
+				filepath.Join(homeDir, APP_DIR, fmt.Sprintf("%s.%s", longVersion, ".zip")), 
+				filepath.Join(homeDir, APP_DIR, GOS_DIR),
+			)
+			if err != nil {
+				logger.Fatal("uncompressZipFile()", zap.Error(err))
+			}
+		default:
+			err = getGoSource(fmt.Sprintf("%s.%s", longVersion, ".zip"), filepath.Join(homeDir, APP_DIR))
+			if err != nil {
+				logger.Fatal("getGoSource()", zap.Error(err))
+			}
+
+			err = uncompressTarFile(
+				filepath.Join(homeDir, APP_DIR, fmt.Sprintf("%s.%s", longVersion, ".tar.gz")),
+				filepath.Join(homeDir, APP_DIR, GOS_DIR),
+			)
+			if err != nil {
+				logger.Fatal("uncompressTarFile()", zap.Error(err))
+			}
 		}
 
-		if err := extractGoSource(
-			fmt.Sprintf("%s.%s-%s", version, osys, arch),
-			osys,
-			appDir,
-			gosDir,
-		); err != nil {
-			logger.Fatalw("extractGoSource()", "error", err.Error())
-		}
-
-		if err := os.Rename(
-			fmt.Sprintf("%s/%s", gosDir, "go"),
-			fmt.Sprintf("%s/%s.%s-%s", gosDir, version, osys, arch),
-		); err != nil {
-			logger.Fatalw("os.Rename()", "error", err.Error())
+		err = os.Rename(filepath.Join(homeDir, APP_DIR, GOS_DIR, "go"), filepath.Join(homeDir, APP_DIR, GOS_DIR, longVersion))
+		if err != nil {
+			logger.Fatal("os.Rename()", zap.Error(err))
 		}
 	}
 
-	if err := setEnvVariables(home, version, osys, arch); err != nil {
-		logger.Fatalw("setEnvVariables()", "error", err.Error())
+	setEnvironment := func() error {
+		appDirErr := os.Setenv("RUNGO_APP_DIR", filepath.Join(homeDir, APP_DIR))
+		goVerErr := os.Setenv("RUNGO_GO_VER", version)
+		goBinErr := os.Setenv("RUNGO_GO_BIN", filepath.Join(homeDir, APP_DIR, GOS_DIR, longVersion, "bin", "go"))
+		if runtime.GOOS == "windows" {
+			goBinErr = os.Setenv("RUNGO_GO_BIN", filepath.Join(homeDir, APP_DIR, GOS_DIR, longVersion, "bin", "go.exe"))
+			return errors.Join(appDirErr, goVerErr, goBinErr)
+		}
+
+		return errors.Join(appDirErr, goVerErr, goBinErr)
+	}
+
+	err = setEnvironment()
+	if err != nil {
+		logger.Fatal("setEnvironment()", zap.Error(err))
 	}
 }
 
-func main() {
-	var (
-		version = os.Getenv("RUNGO_GO_VER")
-		shortcutsModal, aboutModal, versionModal *widget.PopUp
-	)
-
-	myApp := app.New()
-	myWindow := myApp.NewWindow("RunGo")
-	
-	appTabs := newAppTabs(myWindow)
-
-	shortcutsBtn := widget.NewButtonWithIcon("Shortcuts",
-		theme.ContentRedoIcon(),
-		func() {
-			shortcutsModal.Resize(fyne.NewSize(440, 540))
-			shortcutsModal.Show()
-		},
-	)
-
-	aboutBtn := widget.NewButtonWithIcon("About RunGo",
-		theme.InfoIcon(),
-		func() {
-			aboutModal.Resize(fyne.NewSize(440, 540))
-			aboutModal.Show()
-		},
-	)
-
-	versionBtn := widget.NewButtonWithIcon(version,
-		theme.ConfirmIcon(),
-		func() {
-			versionModal.Resize(fyne.NewSize(440, 540))
-			versionModal.Show()
-		},
-	)
-
-	shortcutsModal = newShortcutsModal(myWindow.Canvas(), customShortcuts)
-	aboutModal = newAboutModal(myWindow.Canvas(), aboutMD)
-	versionModal = newVersionModal(myWindow, versionBtn, binding.NewString())
-	
-	myWindow.Canvas().AddShortcut(altT, appTabs.TypedShortcut)
-	myWindow.SetContent(appLayout(appTabs.AppTabs, shortcutsBtn, aboutBtn, versionBtn))
-	myWindow.Resize(fyne.NewSize(1280, 720))
-	myWindow.ShowAndRun()
-}
-
-func appLayout(
-	tabs *container.AppTabs, 
-	shortcutsBtn, aboutBtn, versionBtn *widget.Button,
-) *fyne.Container {
+func appLayout(tabs *container.AppTabs, shortcutsBtn, aboutBtn, versionBtn *widget.Button) *fyne.Container {
 	return container.NewBorder(
 		nil,
 		container.NewPadded(
@@ -216,3 +203,34 @@ func appLayout(
 		container.NewPadded(tabs),
 	)
 }
+
+func main() {
+	myApp := app.New()
+	myWindow := myApp.NewWindow("RunGo")
+	
+	appTabs := newAppTabs(myWindow)
+
+	var shortcutsModal, aboutModal, versionModal *widget.PopUp
+	shortcutsBtn := widget.NewButtonWithIcon("Shortcuts", theme.ContentRedoIcon(), func() {
+		shortcutsModal.Resize(fyne.NewSize(440, 540))
+		shortcutsModal.Show()
+	})
+	aboutBtn := widget.NewButtonWithIcon("About RunGo", theme.InfoIcon(), func() {
+		aboutModal.Resize(fyne.NewSize(440, 540))
+		aboutModal.Show()
+	})
+	versionBtn := widget.NewButtonWithIcon(os.Getenv("RUNGO_GO_VER"), theme.ConfirmIcon(), func() {
+		versionModal.Resize(fyne.NewSize(440, 540))
+		versionModal.Show()
+	})
+
+	shortcutsModal = newShortcutsModal(myWindow.Canvas(), customShortcuts)
+	aboutModal = newAboutModal(myWindow.Canvas(), aboutMD)
+	versionModal = newVersionModal(myWindow, versionBtn, binding.NewString())
+	
+	myWindow.Canvas().AddShortcut(altT, appTabs.TypedShortcut)
+	myWindow.SetContent(appLayout(appTabs.AppTabs, shortcutsBtn, aboutBtn, versionBtn))
+	myWindow.Resize(fyne.NewSize(1280, 720))
+	myWindow.ShowAndRun()
+}
+
