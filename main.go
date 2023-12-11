@@ -53,21 +53,20 @@ var (
 )
 
 var aboutMD = `
-RunGo is a free cross-platform Go playground, that allows users to experiment,
+RunGo is a free cross-platform Go playground that allows users to experiment,
 prototype and get instant feedback. It provides support for running Go versions
 from 1.16+, and is built on top of [Fyne](https://fyne.io), a cross-platform GUI
 toolkit made with Go and inspired by Material Design.
 
 RunGo is mainly built using the following open-source projects:
-- [Golang BSD 3-Clause License](https://github.com/golang/go/blob/master/LICENSE)
-- [Fyne BSD 3-Clause License](https://github.com/fyne-io/fyne/blob/master/LICENSE)
-- [goquery BSD 3-Clause License](https://github.com/PuerkitoBio/goquery/blob/master/LICENSE)
-
-I've only included those who are a direct dependency of the project, but if you
-wish to have a complete list of the projects being used, head to RunGo's **go.mod** file.
+- [github.com/golang/go](https://github.com/golang/go)
+- [github.com/fyne-io/fyne](https://github.com/fyne-io/fyne)
+- [github.com/PuerkitoBio/goquery](https://github.com/PuerkitoBio/goquery)
+- [github.com/golang/mod](https://github.com/golang/mod)
+- [github.com/fyne-io/fyne-cross](https://github.com/fyne-io/fyne-cross)
 
 If you wish to hack for a bit and work on some open issues, you can do so by checking out
-the **CONTRIBUTING.md** file.
+the [Contributing](https://github.com/itsksrof/run-go/tree/master#contributing) section.
 
 [RunGo](https://github.com/itsksrof/run-go) is licensed under the **MIT License**
 
