@@ -9,40 +9,38 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 )
 
 func runFromEditor(data []byte) (string, error) {
-	f := fmt.Sprintf("%d.go", time.Now().Unix())
-	if err := os.WriteFile(f, data, 0644); err != nil {
+	file := fmt.Sprintf("%d.go", time.Now().Unix())
+	err := os.WriteFile(file, data, 0644)
+	if err != nil {
 		return "", err
 	}
 
-	output, _ := exec.Command(os.Getenv("RUNGO_GO_BIN"), "run", f).
-					CombinedOutput()
+	output, _ := exec.Command(os.Getenv("RUNGO_GO_BIN"), "run", file).CombinedOutput()
 
-	if err := os.Remove(f); err != nil {
+	err = os.Remove(file)
+	if err != nil {
 		return "", err
 	}
-
+	
 	return string(output), nil
 }
 
 func runFromSnippet(snippet string, data []byte) (string, error) {
-	dir := fmt.Sprintf("%s/%s/%s",
-		os.Getenv("RUNGO_APP_DIR"),
-		SNIPPETS_DIR,
-		snippet,
-	)
-
-	f := fmt.Sprintf("%s/main.go", dir)
-	if err := os.WriteFile(f, data, 0644); err != nil {
+	dir := filepath.Join(os.Getenv("RUNGO_APP_DIR"), SNIPPETS_DIR, snippet)
+	err := os.WriteFile(filepath.Join(dir, "main.go"), data, 0644)
+	if err != nil {
 		return "", err
 	}
 
 	cmd := exec.Command(os.Getenv("RUNGO_GO_BIN"), "mod", "tidy")
 	cmd.Dir = dir
-	if err := cmd.Run(); err != nil {
+	err = cmd.Run()
+	if err != nil {
 		return "", err
 	}
 
@@ -54,24 +52,21 @@ func runFromSnippet(snippet string, data []byte) (string, error) {
 }
 
 func newSnippet(snippet string, data []byte) error {
-	dir := fmt.Sprintf("%s/%s/%s",
-		os.Getenv("RUNGO_APP_DIR"),
-		SNIPPETS_DIR,
-		snippet,
-	)
-
-	if err := os.Mkdir(dir, 0755); err != nil {
+	dir := filepath.Join(os.Getenv("RUNGO_APP_DIR"), SNIPPETS_DIR, snippet)
+	err := os.Mkdir(dir, 0755)
+	if err != nil {
 		return err
 	}
 
 	cmd := exec.Command(os.Getenv("RUNGO_GO_BIN"), "mod", "init", snippet)
 	cmd.Dir = dir
-	if err := cmd.Run(); err != nil {
+	err = cmd.Run()
+	if err != nil {
 		return err
 	}
 
-	f := fmt.Sprintf("%s/main.go", dir)
-	if err := os.WriteFile(f, data, 0644); err != nil {
+	err = os.WriteFile(filepath.Join(dir, "main.go"), data, 0644)
+	if err != nil {
 		return err
 	}
 
@@ -79,18 +74,14 @@ func newSnippet(snippet string, data []byte) error {
 }
 
 func listSnippets() ([]string, error) {
-	dir := fmt.Sprintf("%s/%s",
-		os.Getenv("RUNGO_APP_DIR"),
-		SNIPPETS_DIR,
-	)
-
+	dir := filepath.Join(os.Getenv("RUNGO_APP_DIR"), SNIPPETS_DIR) 
 	snippets := make([]string, 0)
 	err := fs.WalkDir(os.DirFS(dir), ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		info, err := os.Stat(fmt.Sprintf("%s/%s", dir, path))
+		info, err := os.Stat(filepath.Join(dir, path))
 		if err != nil {
 			return err
 		}
@@ -109,19 +100,13 @@ func listSnippets() ([]string, error) {
 }
 
 func openSnippet(snippet string) (string, error) {
-	dir := fmt.Sprintf("%s/%s/%s",
-		os.Getenv("RUNGO_APP_DIR"),
-		SNIPPETS_DIR,
-		snippet,
-	)
-
+	dir := filepath.Join(os.Getenv("RUNGO_APP_DIR"), SNIPPETS_DIR, snippet)
 	_, err := os.ReadDir(dir)
 	if os.IsNotExist(err) {
 		return "", err
 	}
 
-	f := fmt.Sprintf("%s/main.go", dir)
-	data, err := os.ReadFile(f)
+	data, err := os.ReadFile(filepath.Join(dir, "main.go"))
 	if err != nil {
 		return "", err
 	}
