@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -17,18 +19,9 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// Downloads specified Go source tar or zip file in RUNGO_APP_DIR directory
-func getGoSource(version, osys, dst string) error {
-	ext := "tar.gz"
-	if osys == "windows" {
-		ext = "zip"
-	}
-
-	res, err := http.Get(fmt.Sprintf("%s/%s.%s",
-		GO_URL,
-		version,
-		ext,
-	))
+// Downloads the specified Go source .tar or .zip file in RUNGO_APP_DIR directory
+func getGoSource(file, dst string) error {
+	res, err := http.Get(path.Join(GO_URL, file))
 	if err != nil {
 		return fmt.Errorf("%w: %v", errRequestFailed, err)
 	}
@@ -38,40 +31,18 @@ func getGoSource(version, osys, dst string) error {
 		return fmt.Errorf("%w: %s", errUnexpectedStatus, res.Status)
 	}
 
-	out, err := os.Create(fmt.Sprintf("%s/%s.%s",
-		dst,
-		version,
-		ext,
-	))
+	f, err := os.Create(filepath.Join(dst, file))
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer f.Close()
 
-	if _, err := io.Copy(out, res.Body); err != nil {
+	_, err = io.Copy(f, res.Body)
+	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func getLatestGoVersion() (string, error) {
-	resp, err := http.Get("https://go.dev/VERSION?m=text")
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", err
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return strings.Split(string(body), "\n")[0], nil
 }
 
 // Scrapes all Go versions that match the regexp and sorts them using
