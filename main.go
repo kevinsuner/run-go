@@ -1,6 +1,6 @@
 /*
-SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
-SPDX-License-Identifier: MIT
+	SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
+	SPDX-License-Identifier: MIT
 */
 package main
 
@@ -131,26 +131,26 @@ func init() {
 	if os.IsNotExist(err) {
 		switch runtime.GOOS {
 		case "windows":
-			err = getGoSource(fmt.Sprintf("%s.%s", longVersion, ".zip"), filepath.Join(homeDir, APP_DIR))
+			err = getGoSource(fmt.Sprintf("%s.%s", longVersion, "zip"), filepath.Join(homeDir, APP_DIR))
 			if err != nil {
 				logger.Fatal("getGoSource()", zap.Error(err))
 			}
 	
 			err = uncompressZipFile(
-				filepath.Join(homeDir, APP_DIR, fmt.Sprintf("%s.%s", longVersion, ".zip")), 
+				filepath.Join(homeDir, APP_DIR, fmt.Sprintf("%s.%s", longVersion, "zip")), 
 				filepath.Join(homeDir, APP_DIR, GOS_DIR),
 			)
 			if err != nil {
 				logger.Fatal("uncompressZipFile()", zap.Error(err))
 			}
 		default:
-			err = getGoSource(fmt.Sprintf("%s.%s", longVersion, ".zip"), filepath.Join(homeDir, APP_DIR))
+			err = getGoSource(fmt.Sprintf("%s.%s", longVersion, "tar.gz"), filepath.Join(homeDir, APP_DIR))
 			if err != nil {
 				logger.Fatal("getGoSource()", zap.Error(err))
 			}
 
 			err = uncompressTarFile(
-				filepath.Join(homeDir, APP_DIR, fmt.Sprintf("%s.%s", longVersion, ".tar.gz")),
+				filepath.Join(homeDir, APP_DIR, fmt.Sprintf("%s.%s", longVersion, "tar.gz")),
 				filepath.Join(homeDir, APP_DIR, GOS_DIR),
 			)
 			if err != nil {
