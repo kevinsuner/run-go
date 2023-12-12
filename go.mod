@@ -2,8 +2,6 @@ module run-go
 
 go 1.21
 
-toolchain go1.21.4
-
 require (
 	fyne.io/fyne/v2 v2.4.2
 	github.com/PuerkitoBio/goquery v1.8.1
