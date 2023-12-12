@@ -1,16 +1,15 @@
 /*
-	SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
-	SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
+SPDX-License-Identifier: MIT
 */
 package main
 
 import (
-	"log"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/widget"
+	"go.uber.org/zap"
 )
 
 type editor struct {
@@ -35,18 +34,30 @@ func (e *editor) TypedShortcut(shortcut fyne.Shortcut) {
 	switch customShortcut.ShortcutName() {
 	case ALT_RETURN:
 		snippet, err := e.snippet.Get()
-		if err != nil { log.Fatalln(err) }
+		if err != nil {
+			logger.Fatal("e.snippet.Get()", zap.Error(err))
+		}
 
 		if len(snippet) != 0 {
 			output, err := runFromSnippet(snippet, []byte(e.Text))
-			if err != nil { log.Fatalln(err) }
+			if err != nil {
+				logger.Fatal("runFromSnippet()", zap.Error(err))
+			}
 
-			e.output.Set(output)
+			err = e.output.Set(output)
+			if err != nil {
+				logger.Fatal("e.output.Set()", zap.Error(err))
+			}
 		}
 
 		output, err := runFromEditor([]byte(e.Text))
-		if err != nil { log.Fatalln(err) }
+		if err != nil {
+			logger.Fatal("runFromEditor()", zap.Error(err))
+		}
 
-		e.output.Set(output)
+		err = e.output.Set(output)
+		if err != nil {
+			logger.Fatal("e.output.Set()", zap.Error(err))
+		}
 	}
 }
