@@ -30,7 +30,7 @@ build-darwin:
 # Build the application for Windows (amd64)
 build-windows:
 	@echo ">>> Building Go binaries for Windows (amd64)"
-	@fyne-cross windows -arch=amd64
+	@fyne-cross windows -ldflags="-H=windowsgui" -arch=amd64
 
 # Install development tools
 install-tools:
