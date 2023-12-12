@@ -17,13 +17,11 @@ type customAppTabs struct {
 }
 
 func newAppTabs(window fyne.Window) *customAppTabs {
-	var (
-		output = binding.NewString()
-		snippet = binding.NewString()
-		snippetList = binding.NewStringList()
-	)
-
 	appTabs := &customAppTabs{window: window}
+
+	output := binding.NewString()
+	snippet := binding.NewString()
+	snippetList := binding.NewStringList()
 
 	editor := playgroundEditor(output, snippet)
 	console := playgroundConsole(output)
@@ -59,11 +57,9 @@ func (c *customAppTabs) TypedShortcut(shortcut fyne.Shortcut) {
 }
 
 func newTab(appTabs *container.AppTabs, window fyne.Window) *container.TabItem {
-	var (
-		output = binding.NewString()
-		snippet = binding.NewString()
-		snippetList = binding.NewStringList()
-	)
+	output := binding.NewString()
+	snippet := binding.NewString()
+	snippetList := binding.NewStringList()
 
 	editor := playgroundEditor(output, snippet)
 	console := playgroundConsole(output)
