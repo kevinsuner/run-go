@@ -18,13 +18,11 @@ func uncompressTarFile(file, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer reader.Close()
 
 	gzipReader, err := gzip.NewReader(reader)
 	if err != nil {
 		return err
 	}
-	defer gzipReader.Close()
 
 	tarReader := tar.NewReader(gzipReader)
 	for {
@@ -60,11 +58,14 @@ func uncompressTarFile(file, dst string) error {
 		}
 	}
 
+	reader.Close()
+	gzipReader.Close()
+
 	err = os.Remove(file)
 	if err != nil {
 		return err
 	}
-
+	
 	return nil
 }
 
@@ -73,7 +74,6 @@ func uncompressZipFile(file, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer reader.Close()
 
 	for _, f := range reader.File {
 		target := filepath.Join(dst, f.Name)
@@ -108,6 +108,8 @@ func uncompressZipFile(file, dst string) error {
 		dstFile.Close()
 		srcFile.Close()
 	}
+
+	reader.Close()
 
 	err = os.Remove(file)
 	if err != nil {
