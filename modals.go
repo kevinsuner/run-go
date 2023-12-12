@@ -1,6 +1,6 @@
 /*
-SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
-SPDX-License-Identifier: MIT
+	SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
+	SPDX-License-Identifier: MIT
 */
 package main
 
@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"fyne.io/fyne/v2"
@@ -18,6 +19,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"go.uber.org/zap"
 )
 
 type customShortcut struct {
@@ -113,33 +115,22 @@ func newAboutModal(canvas fyne.Canvas, content string) *widget.PopUp {
 	return aboutModal
 }
 
-func newVersionModal(
-	window fyne.Window, 
-	versionBtn *widget.Button, 
-	versionStr binding.String,
-) *widget.PopUp {
-	var (
-		versionModal *widget.PopUp
-		appDir = os.Getenv("RUNGO_APP_DIR")
-		osys = runtime.GOOS
-		arch = runtime.GOARCH
-	)
-
+func newVersionModal(window fyne.Window, versionBtn *widget.Button, versionStr binding.String) *widget.PopUp {
 	versions, err := getGoVersions()
 	if err != nil {
-		if errors.Unwrap(err) == errRequestFailed ||
-			errors.Unwrap(err) == errUnexpectedStatus {
+		if errors.Unwrap(err) == errRequestFailed || errors.Unwrap(err) == errUnexpectedStatus {
 			dialog.NewInformation("An error occurred", err.Error(), window).Show()
-			logger.Errorw("getGoVersions()", "error", err.Error())
+			logger.Error("getGoVersions()", zap.Error(err))
 
 			// Set versions to an empty array, as this could be due to the
 			// service being currently unavailable
 			versions = []string{}
 		} else {
-			logger.Fatalw("getGoVersions()", "error", err.Error())
+			logger.Fatal("getGoVersions()", zap.Error(err))
 		}
 	}
 
+	var versionModal *widget.PopUp
 	versionModal = widget.NewModalPopUp(container.NewBorder(
 		container.NewPadded(container.NewGridWithColumns(12,
 			layout.NewSpacer(),
@@ -172,60 +163,72 @@ func newVersionModal(
 				button.SetText(versions[lid])
 				button.Alignment = widget.ButtonAlignLeading
 				button.OnTapped = func() {
-					gosDir := fmt.Sprintf("%s/%s", appDir, GOS_DIR)
-					version := fmt.Sprintf("%s.%s-%s", button.Text, osys, arch)
-
-					_, err := os.ReadDir(fmt.Sprintf("%s/%s", gosDir, version))
+					longVersion := fmt.Sprintf("%s.%s-%s", button.Text, runtime.GOOS, runtime.GOARCH)
+					_, err = os.ReadDir(filepath.Join(os.Getenv("RUNGO_APP_DIR"), GOS_DIR, longVersion))
 					if os.IsNotExist(err) {
-						// TODO: Ideally this should represent a real progress bar
-						progress := dialog.NewCustomWithoutButtons(
-							fmt.Sprintf("Downloading %s", version),
+						progress := dialog.NewCustomWithoutButtons(fmt.Sprintf("Downloading %s", button.Text),
 							container.NewPadded(widget.NewProgressBarInfinite()),
 							window,
 						)
 						progress.Show()
 						defer progress.Hide()
 
-						if err := getGoSource(
-							version,
-							osys,
-							appDir,
-						); err != nil {
-							logger.Fatalw("getGoSource()", "error", err.Error())
+						switch runtime.GOOS {
+						case "windows":
+							err = getGoSource(fmt.Sprintf("%s.%s", longVersion, "zip"), filepath.Join(os.Getenv("RUNGO_APP_DIR")))
+							if err != nil {
+								logger.Fatal("getGoSource()", zap.Error(err))
+							}
+
+							err = uncompressZipFile(
+								filepath.Join(os.Getenv("RUNGO_APP_DIR"), fmt.Sprintf("%s.%s", longVersion, "zip")),
+								filepath.Join(os.Getenv("RUNGO_APP_DIR"), GOS_DIR),
+							)
+							if err != nil {
+								logger.Fatal("uncompressZipFile()", zap.Error(err))
+							}
+						default:
+							err = getGoSource(fmt.Sprintf("%s.%s", longVersion, "tar.gz"), filepath.Join(os.Getenv("RUNGO_APP_DIR")))
+							if err != nil {
+								logger.Fatal("getGoSource()", zap.Error(err))
+							}
+
+							err = uncompressTarFile(
+								filepath.Join(os.Getenv("RUNGO_APP_DIR"), fmt.Sprintf("%s.%s", longVersion, "tar.gz")),
+								filepath.Join(os.Getenv("RUNGO_APP_DIR"), GOS_DIR),
+							)
+							if err != nil {
+								logger.Fatal("uncompressTarFile()", zap.Error(err))
+							}
 						}
 
-						if err := extractGoSource(
-							version,
-							osys,
-							appDir,
-							gosDir,
-						); err != nil {
-							logger.Fatalw("extractGoSource()", "error", err.Error())
-						}
-
-						if err := os.Rename(
-							fmt.Sprintf("%s/%s", gosDir, "go"),
-							fmt.Sprintf("%s/%s", gosDir, version),
-						); err != nil {
-							logger.Fatalw("os.Rename()", "error", err.Error())
+						err = os.Rename(filepath.Join(os.Getenv("RUNGO_APP_DIR"), GOS_DIR, "go"), filepath.Join(os.Getenv("RUNGO_APP_DIR"), GOS_DIR, longVersion))
+						if err != nil {
+							logger.Fatal("os.Rename()", zap.Error(err))
 						}
 					}
 
-					if err := updateGoBinEnvVariable(
-						gosDir,
-						version,
-						osys,
-					); err != nil {
-						logger.Fatalw("updateGoBinEnvVariable()", "error", err.Error())
-					}
 
-					if err := versionStr.Set(versions[lid]); err != nil {
-						logger.Fatalw("versionStr.Set()", "error", err.Error())
-					}
-
-					version, err = versionStr.Get()
+					err = os.Setenv("RUNGO_GO_BIN", filepath.Join(os.Getenv("RUNGO_APP_DIR"), GOS_DIR, longVersion, "bin", "go"))
 					if err != nil {
-						logger.Fatalw("versionStr.Get()", "error", err.Error())
+						logger.Fatal("os.Setenv()", zap.Error(err))
+					}
+
+					if runtime.GOOS == "windows" {
+						err = os.Setenv("RUNGO_GO_BIN", filepath.Join(os.Getenv("RUNGO_APP_DIR"), GOS_DIR, longVersion, "bin", "go.exe"))
+						if err != nil {
+							logger.Fatal("os.Setenv()", zap.Error(err))
+						}
+					}
+
+					err = versionStr.Set(versions[lid])
+					if err != nil {
+						logger.Fatal("versionStr.Set()", zap.Error(err))
+					}
+
+					version, err := versionStr.Get()
+					if err != nil {
+						logger.Fatal("versionStr.Get()", zap.Error(err))
 					}
 
 					versionBtn.SetText(version)
@@ -242,18 +245,11 @@ type customSaveModal struct {
 	*widget.PopUp
 }
 
-func newSaveModal(
-	entry *widget.Entry, 
-	appTabs *container.AppTabs,
-	snippet binding.String,
-	window fyne.Window,
-) *customSaveModal {
-	var (
-		customSaveModal = &customSaveModal{}
-		saveModal *widget.PopUp
-	)
-
+func newSaveModal(entry *widget.Entry, appTabs *container.AppTabs, snippet binding.String, window fyne.Window) *customSaveModal {
+	customSaveModal := &customSaveModal{}
+	
 	input := &widget.Entry{PlaceHolder: "Snippet name"}
+	var saveModal *widget.PopUp
 	saveModal = widget.NewModalPopUp(container.NewBorder(
 		container.NewPadded(container.NewGridWithColumns(12,
 			layout.NewSpacer(),
@@ -277,18 +273,20 @@ func newSaveModal(
 		container.NewPadded(container.NewVBox(
 			input,
 			widget.NewButtonWithIcon("Save", theme.ConfirmIcon(), func() {
-				if err := newSnippet(input.Text, []byte(entry.Text)); err != nil {
+				err := newSnippet(input.Text, []byte(entry.Text))
+				if err != nil {
 					if errors.Is(err, os.ErrExist) {
 						dialog.NewInformation("An error occurred", err.Error(), window).Show()
-						logger.Errorw("newSnippet()", "error", err.Error())
+						logger.Error("newSnippet()", zap.Error(err))
 						return
 					} else {
-						logger.Fatalw("newSnippet()", "error", err.Error())
+						logger.Fatal("newSnippet()", zap.Error(err))
 					}
 				}
 
-				if err := snippet.Set(input.Text); err != nil {
-					logger.Fatalw("snippet.Set()", "error", err.Error())
+				err = snippet.Set(input.Text)
+				if err != nil {
+					logger.Fatal("snippet.Set()", zap.Error(err))
 				}
 
 				appTabs.Selected().Text = input.Text
@@ -321,18 +319,10 @@ type customOpenModal struct {
 	*widget.PopUp
 }
 
-func newOpenModal(
-	entry *widget.Entry,
-	appTabs *container.AppTabs,
-	snippet binding.String,
-	snippetList binding.StringList,
-	window fyne.Window,
-) *customOpenModal {
-	var (
-		customOpenModal = &customOpenModal{snippetList: snippetList}
-		openModal *widget.PopUp
-	)
-
+func newOpenModal(entry *widget.Entry, appTabs *container.AppTabs, snippet binding.String, snippetList binding.StringList, window fyne.Window) *customOpenModal {
+	customOpenModal := &customOpenModal{snippetList: snippetList}
+	
+	var openModal *widget.PopUp
 	openModal = widget.NewModalPopUp(container.NewBorder(
 		container.NewPadded(container.NewGridWithColumns(12,
 			layout.NewSpacer(),
@@ -363,7 +353,7 @@ func newOpenModal(
 			func(lid widget.ListItemID, obj fyne.CanvasObject) {
 				snippetName, err := snippetList.GetValue(lid)
 				if err != nil {
-					logger.Fatalw("snippetList.GetValue()", "error", err.Error())
+					logger.Fatal("snippetList.GetValue()", zap.Error(err))
 				}
 
 				button := obj.(*widget.Button)
@@ -372,7 +362,7 @@ func newOpenModal(
 				button.OnTapped = func() {
 					if len(entry.Text) != 0 {
 						dialog.NewInformation("Info", "Tab already in use", window).Show()
-						logger.Warnw("user attempted to open snippet in used tab")
+						logger.Warn("user attempted to open snippet in used tab")
 						return
 					}
 
@@ -380,15 +370,16 @@ func newOpenModal(
 					if err != nil {
 						if errors.Is(err, os.ErrNotExist) {
 							dialog.NewInformation("An error occurred", err.Error(), window).Show()
-							logger.Errorw("openSnippet()", "error", err.Error())
+							logger.Error("openSnippet()", zap.Error(err))
 							return
 						} else {
-							logger.Fatalw("openSnippet()", "error", err.Error())
+							logger.Fatal("openSnippet()", zap.Error(err))
 						}
 					}
 
-					if err := snippet.Set(button.Text); err != nil {
-						logger.Fatalw("snippet.Set()", "error", err.Error())
+					err = snippet.Set(button.Text)
+					if err != nil {
+						logger.Fatal("snippet.Set()", zap.Error(err))
 					}
 
 					entry.SetText(data)
@@ -415,11 +406,12 @@ func (c *customOpenModal) TypedShortcut(shortcut fyne.Shortcut) {
 	case ALT_O:
 		snippets, err := listSnippets()
 		if err != nil {
-			logger.Fatalw("listSnippet()", "error", err.Error())
+			logger.Fatal("listSnippet()", zap.Error(err))
 		}
 
-		if err := c.snippetList.Set(snippets); err != nil {
-			logger.Fatalw("c.snippetList.Set()", "error", err.Error())
+		err = c.snippetList.Set(snippets)
+		if err != nil {
+			logger.Fatal("c.snippetList.Set()", zap.Error(err))
 		}
 
 		c.PopUp.Resize(fyne.NewSize(440, 540))
