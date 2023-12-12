@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -37,7 +36,7 @@ const (
 	ALT_O		= "CustomDesktop:Alt+O"
 	ALT_RETURN	= "CustomDesktop:Alt+Return"
 
-	GO_URL = "https://go.dev/dl"
+	GO_URL = "https://go.dev"
 )
 
 var (
@@ -79,13 +78,6 @@ func init() {
 		log.Fatalln(err)
 	}
 
-	zapLogger := zap.NewProductionConfig()
-	zapLogger.OutputPaths = []string{filepath.Join(homeDir, APP_DIR, "run-go.log")}
-	logger, err = zapLogger.Build()
-	if err != nil {
-		log.Fatalln(err)
-	}
-
 	appDirs := []string{
 		filepath.Join(homeDir, APP_DIR),
 		filepath.Join(homeDir, APP_DIR, GOS_DIR),
@@ -97,13 +89,20 @@ func init() {
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(appDir, 0755)
 			if err != nil {
-				logger.Fatal("os.MkdirAll()", zap.Error(err))
+				log.Fatalln("os.MkdirAll()", zap.Error(err))
 			}
 		}
 	}
 
+	zapLogger := zap.NewProductionConfig()
+	zapLogger.OutputPaths = []string{filepath.Join(homeDir, APP_DIR, "run-go.log")}
+	logger, err = zapLogger.Build()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	getLatestGoVersion := func() (string, error) {
-		res, err := http.Get(path.Join(GO_URL, "VERSION?m=text"))
+		res, err := http.Get(fmt.Sprintf("%s/%s", GO_URL, "VERSION?m=text"))
 		if err != nil {
 			return "", fmt.Errorf("%w: %v", errRequestFailed, err)
 		}
