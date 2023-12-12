@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -21,7 +20,7 @@ import (
 
 // Downloads the specified Go source .tar or .zip file in RUNGO_APP_DIR directory
 func getGoSource(file, dst string) error {
-	res, err := http.Get(path.Join(GO_URL, file))
+	res, err := http.Get(fmt.Sprintf("%s/dl/%s", GO_URL, file))
 	if err != nil {
 		return fmt.Errorf("%w: %v", errRequestFailed, err)
 	}
@@ -49,7 +48,7 @@ func getGoSource(file, dst string) error {
 // semver package
 func getGoVersions() ([]string, error) {
 	// TODO: This should be cached
-	res, err := http.Get(GO_URL)
+	res, err := http.Get(GO_URL + "/dl")
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", errRequestFailed, err)
 	}
