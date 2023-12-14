@@ -7,6 +7,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -366,24 +367,28 @@ func newOpenModal(entry *widget.Entry, appTabs *container.AppTabs, snippet bindi
 						return
 					}
 
-					data, err := openSnippet(button.Text)
-					if err != nil {
-						if errors.Is(err, os.ErrNotExist) {
-							dialog.NewInformation("An error occurred", err.Error(), window).Show()
-							logger.Error("openSnippet()", zap.Error(err))
-							return
-						} else {
-							logger.Fatal("openSnippet()", zap.Error(err))
-						}
+					dir := filepath.Join(os.Getenv("RUNGO_APP_DIR"), SNIPPETS_DIR, snippetName)
+					_, err = os.ReadDir(dir)
+					if os.IsNotExist(err) {
+						dialog.NewInformation("An error occurred", err.Error(), window).Show()
+						logger.Error("os.ReadDir()", zap.Error(err))
+						return
+					} else if err != nil {
+						logger.Fatal("os.ReadDir()", zap.Error(err))
 					}
 
-					err = snippet.Set(button.Text)
+					data, err := os.ReadFile(filepath.Join(dir, "main.go"))
+					if err != nil {
+						logger.Fatal("os.ReadFile()", zap.Error(err))
+					}
+
+					err = snippet.Set(snippetName)
 					if err != nil {
 						logger.Fatal("snippet.Set()", zap.Error(err))
 					}
 
-					entry.SetText(data)
-					appTabs.Selected().Text = button.Text
+					entry.SetText(string(data))
+					appTabs.Selected().Text = snippetName
 					appTabs.Refresh()
 					openModal.Hide()
 				}
@@ -404,12 +409,29 @@ func (c *customOpenModal) TypedShortcut(shortcut fyne.Shortcut) {
 
 	switch customShortcut.ShortcutName() {
 	case ALT_O:
-		snippets, err := listSnippets()
+		dir := filepath.Join(os.Getenv("RUNGO_APP_DIR"), SNIPPETS_DIR)
+		snippets := make([]string, 0)
+		err := fs.WalkDir(os.DirFS(dir), ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+
+			info, err := os.Stat(filepath.Join(dir, path))
+			if err != nil {
+				return err
+			}
+
+			if info.IsDir() {
+				snippets = append(snippets, path)
+			}
+
+			return nil
+		})
 		if err != nil {
-			logger.Fatal("listSnippet()", zap.Error(err))
+			logger.Fatal("fs.WalkDir()", zap.Error(err))
 		}
 
-		err = c.snippetList.Set(snippets)
+		err = c.snippetList.Set(snippets[1:])
 		if err != nil {
 			logger.Fatal("c.snippetList.Set()", zap.Error(err))
 		}
