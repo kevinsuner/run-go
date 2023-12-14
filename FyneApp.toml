@@ -4,4 +4,3 @@ Website = "https://github.com/itsksrof/run-go"
   Name = "RunGo"
   ID = "com.run-go.app"
   Version = "0.1.0"
-  Build = 8
