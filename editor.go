@@ -38,21 +38,23 @@ func (e *editor) TypedShortcut(shortcut fyne.Shortcut) {
 			logger.Fatal("e.snippet.Get()", zap.Error(err))
 		}
 
-		if len(snippet) != 0 {
-			output, err := runFromSnippet(snippet, []byte(e.Text))
+		if len(snippet) > 0 {
+			output, err := runCode(snippet, []byte(e.Text))
 			if err != nil {
-				logger.Fatal("runFromSnippet()", zap.Error(err))
+				logger.Fatal("runCode()", zap.Error(err))
 			}
 
 			err = e.output.Set(output)
 			if err != nil {
 				logger.Fatal("e.output.Set()", zap.Error(err))
 			}
+
+			return
 		}
 
-		output, err := runFromEditor([]byte(e.Text))
+		output, err := runCode("", []byte(e.Text))
 		if err != nil {
-			logger.Fatal("runFromEditor()", zap.Error(err))
+			logger.Fatal("runCode()", zap.Error(err))
 		}
 
 		err = e.output.Set(output)
