@@ -2,6 +2,8 @@
 	SPDX-FileCopyrightText: 2023 Kevin Suñer <keware.dev@proton.me>
 	SPDX-License-Identifier: MIT
 */
+
+//go:build !windows
 package main
 
 import (
@@ -14,7 +16,7 @@ import (
 )
 
 func runFromEditor(data []byte) (string, error) {
-	file := fmt.Sprintf("%d.go", time.Now().Unix())
+	file := filepath.Join(os.Getenv("RUNGO_APP_DIR"), fmt.Sprintf("%d.go", time.Now().Unix()))
 	err := os.WriteFile(file, data, 0644)
 	if err != nil {
 		return "", err
