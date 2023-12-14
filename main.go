@@ -79,7 +79,6 @@ func init() {
 	}
 
 	appDirs := []string{
-		filepath.Join(homeDir, APP_DIR),
 		filepath.Join(homeDir, APP_DIR, GOS_DIR),
 		filepath.Join(homeDir, APP_DIR, SNIPPETS_DIR),
 	}
@@ -126,7 +125,7 @@ func init() {
 	}
 
 	longVersion := fmt.Sprintf("%s.%s-%s", version, runtime.GOOS, runtime.GOARCH)
-	_, err = os.ReadDir(filepath.Join(homeDir, APP_DIR, GOS_DIR, longVersion))
+	_, err = os.Stat(filepath.Join(homeDir, APP_DIR, GOS_DIR, longVersion))
 	if os.IsNotExist(err) {
 		switch runtime.GOOS {
 		case "windows":
