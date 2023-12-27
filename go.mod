@@ -3,7 +3,7 @@ module run-go
 go 1.21
 
 require (
-	fyne.io/fyne/v2 v2.4.2
+	fyne.io/fyne/v2 v2.4.3
 	github.com/PuerkitoBio/goquery v1.8.1
 	go.uber.org/zap v1.26.0
 	golang.org/x/mod v0.14.0
